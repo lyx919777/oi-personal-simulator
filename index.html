@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1148,10 +1149,14 @@
             if (game.currentMonth > CONFIG.monthsPerYear) {
                 game.currentMonth = 1;
                 game.currentYear++;
+                addLog(`进入第${game.currentYear}学年`, 'success');
+            }
+            // 赛季清零：每年9月是新赛季开始
+            if (game.currentMonth === 9 && game.currentWeek === 1) {
                 Object.keys(game.competitionResults).forEach(key => {
                     if (game.competitionResults[key]) game.competitionResults[key].thisYear = false;
                 });
-                addLog(`进入第${game.currentYear}学年`, 'success');
+                addLog(`新的OI赛季开始了！`, 'success');
             }
             if (game.currentYear > game.totalYears) { endGame(); return false; }
             if (game.pressure > 0) game.pressure = Math.max(0, game.pressure - 2);
@@ -1862,17 +1867,20 @@
                 
                 // 计算知识点掌握度显示
                 let masteryDisplay = '-';
+                let avgMastery = 0;
                 if (p.knowledgeDetails && p.knowledgeDetails.length > 0) {
-                    const avgMastery = Math.round(p.knowledgeDetails.reduce((sum, k) => sum + k.mastery, 0) / p.knowledgeDetails.length);
+                    avgMastery = Math.round(p.knowledgeDetails.reduce((sum, k) => sum + k.mastery, 0) / p.knowledgeDetails.length);
                     masteryDisplay = `${avgMastery}%`;
                 }
+                
+                const masteryColor = avgMastery >= 80 ? 'var(--success)' : avgMastery >= 50 ? 'var(--warning)' : 'var(--danger)';
                 
                 problemTableHtml += `<tr>
                     <td>${p.name}</td>
                     <td>${p.type}</td>
                     <td>${p.difficulty}</td>
                     <td style="font-size: 0.8rem; max-width: 120px;">${kpNames}</td>
-                    <td style="color: ${avgMastery >= 80 ? 'var(--success)' : avgMastery >= 50 ? 'var(--warning)' : 'var(--danger)'};">${masteryDisplay}</td>
+                    <td style="color: ${masteryColor};">${masteryDisplay}</td>
                     <td>${p.fullScore}</td>
                     <td class="${scoreClass}">${p.score}</td>
                 </tr>`;
