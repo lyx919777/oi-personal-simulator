@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OI 个人模拟器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #4a90d9;
+            --secondary: #6c5ce7;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #e17055;
+            --dark: #2d3436;
+            --light: #dfe6e9;
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --text: #2d3436;
+            --text-light: #636e72;
+            --gold: #f1c40f;
+            --silver: #bdc3c7;
+            --bronze: #cd6133;
+        }
+        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: var(--text); }
+        .hidden { display: none !important; }
+
+        /* 开始界面 */
+        #start-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .start-title { font-size: 3rem; font-weight: bold; color: white; text-shadow: 2px 2px 10px rgba(0,0,0,0.3); margin-bottom: 10px; }
+        .start-subtitle { font-size: 1.2rem; color: rgba(255,255,255,0.8); margin-bottom: 40px; }
+        .start-card { background: var(--card); border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .start-card h2 { text-align: center; margin-bottom: 30px; color: var(--primary); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-light); }
+        .form-group input { width: 100%; padding: 12px 16px; border: 2px solid var(--light); border-radius: 10px; font-size: 1rem; }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
+        .start-options { display: flex; gap: 15px; margin-bottom: 30px; }
+        .start-option { flex: 1; padding: 20px; border: 3px solid var(--light); border-radius: 15px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .start-option:hover { border-color: var(--primary); transform: translateY(-3px); }
+        .start-option.selected { border-color: var(--primary); background: linear-gradient(135deg, #667eea20, #764ba220); }
+        .start-option h3 { font-size: 1.3rem; margin-bottom: 10px; color: var(--primary); }
+        .start-option p { font-size: 0.85rem; color: var(--text-light); }
+        .btn { display: inline-block; padding: 15px 40px; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; text-align: center; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; width: 100%; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(74, 144, 217, 0.4); }
+        .btn-secondary { background: var(--light); color: var(--text); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-small { padding: 8px 16px; font-size: 0.9rem; border-radius: 20px; }
+
+        /* 游戏主界面 */
+        #game-screen { min-height: 100vh; padding: 15px; }
+        .game-header { background: var(--card); border-radius: 15px; padding: 15px 25px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px; }
+        .game-title { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        .game-time { display: flex; gap: 20px; align-items: center; }
+        .time-item { text-align: center; }
+        .time-item .label { font-size: 0.75rem; color: var(--text-light); }
+        .time-item .value { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+        .game-container { display: grid; grid-template-columns: 280px 1fr; gap: 15px; }
+        .panel { background: var(--card); border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .panel-title { font-size: 1rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--light); display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 角色属性 */
+        .player-name { font-size: 1.2rem; font-weight: bold; text-align: center; margin-bottom: 15px; color: var(--dark); }
+        .player-level { text-align: center; font-size: 0.85rem; color: var(--text-light); margin-bottom: 15px; }
+        .attr-section { margin-bottom: 15px; }
+        .attr-section-title { font-size: 0.85rem; font-weight: 600; color: var(--text-light); margin-bottom: 8px; }
+        .attr-item { display: flex; align-items: center; margin-bottom: 8px; }
+        .attr-name { width: 70px; font-size: 0.85rem; color: var(--text); }
+        .attr-bar { flex: 1; height: 8px; background: var(--light); border-radius: 4px; overflow: hidden; margin: 0 8px; }
+        .attr-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .attr-value { width: 50px; font-size: 0.85rem; font-weight: 600; text-align: right; }
+        .attr-bar-fill.thinking { background: linear-gradient(90deg, #74b9ff, #0984e3); }
+        .attr-bar-fill.coding { background: linear-gradient(90deg, #81ecec, #00cec9); }
+        .attr-bar-fill.mental { background: linear-gradient(90deg, #ffeaa7, #fdcb6e); }
+        .attr-bar-fill.ds { background: linear-gradient(90deg, #a29bfe, #6c5ce7); }
+        .attr-bar-fill.graph { background: linear-gradient(90deg, #fd79a8, #e84393); }
+        .attr-bar-fill.string { background: linear-gradient(90deg, #fab1a0, #e17055); }
+        .attr-bar-fill.dp { background: linear-gradient(90deg, #55efc4, #00b894); }
+        .attr-bar-fill.math { background: linear-gradient(90deg, #fdcb6e, #f39c12); }
+        .status-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--light); }
+        .status-item:last-child { border-bottom: none; }
+        .status-name { font-size: 0.85rem; color: var(--text); }
+        .status-value { font-weight: 600; font-size: 0.85rem; }
+        .status-value.pressure { color: var(--danger); }
+        .status-value.money { color: var(--success); }
+        .status-value.rp { color: var(--gold); }
+
+        /* 教练 */
+        .coach-item { padding: 12px; margin-bottom: 10px; background: var(--bg); border-radius: 10px; cursor: pointer; transition: all 0.3s; }
+        .coach-item:hover { transform: translateX(5px); background: linear-gradient(135deg, #667eea10, #764ba210); }
+        .coach-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .coach-name { font-weight: 600; font-size: 0.9rem; }
+        .coach-specialty { font-size: 0.75rem; color: var(--text-light); }
+        .coach-relation { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; background: var(--primary); color: white; }
+        .coach-bar { height: 6px; background: var(--light); border-radius: 3px; overflow: hidden; }
+        .coach-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 3px; transition: width 0.5s ease; }
+
+        /* 主操作区 */
+        .main-content { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .section-panel { background: var(--card); border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .section-title { font-size: 1.1rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--light); }
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .action-card { background: var(--bg); border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+        .action-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: var(--primary); }
+        .action-card.disabled { opacity: 0.5; cursor: not-allowed; }
+        .action-card.disabled:hover { transform: none; box-shadow: none; border-color: transparent; }
+        .action-card-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 5px; color: var(--primary); }
+        .action-card-desc { font-size: 0.75rem; color: var(--text-light); margin-bottom: 8px; }
+        .action-card-cost { font-size: 0.7rem; color: var(--warning); display: flex; flex-wrap: wrap; gap: 5px; }
+
+        /* 比赛 */
+        .competition-list { display: flex; flex-direction: column; gap: 10px; }
+        .competition-card { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 12px; padding: 15px; transition: all 0.3s; }
+        .competition-card.locked { background: linear-gradient(135deg, #b2bec3, #636e72); }
+        .competition-card.current { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); } 50% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); } }
+        .competition-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .competition-name { font-size: 1rem; font-weight: bold; }
+        .competition-status { font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.2); }
+        .competition-info { font-size: 0.8rem; opacity: 0.9; }
+
+        /* 教练互动 */
+        .coach-interact { padding: 12px; background: var(--bg); border-radius: 10px; margin-bottom: 10px; }
+        .coach-interact-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .coach-interact-name { font-weight: 600; font-size: 0.9rem; }
+        .coach-interact-level { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; background: var(--primary); color: white; }
+        .coach-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* 日志 */
+        .log-list { max-height: 200px; overflow-y: auto; }
+        .log-item { padding: 8px; margin-bottom: 6px; background: var(--bg); border-radius: 6px; font-size: 0.8rem; border-left: 3px solid var(--primary); }
+        .log-item.success { border-left-color: var(--success); }
+        .log-item.warning { border-left-color: var(--warning); }
+        .log-item.danger { border-left-color: var(--danger); }
+        .log-time { font-size: 0.7rem; color: var(--text-light); margin-bottom: 3px; }
+
+        /* 成就 */
+        .achievement-item { display: flex; align-items: center; gap: 8px; padding: 8px; margin-bottom: 6px; background: var(--bg); border-radius: 6px; }
+        .achievement-item.locked { opacity: 0.5; }
+        .achievement-icon { font-size: 1.2rem; }
+        .achievement-info { flex: 1; }
+        .achievement-name { font-weight: 600; font-size: 0.8rem; }
+        .achievement-desc { font-size: 0.7rem; color: var(--text-light); }
+
+        /* 弹窗 */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal { background: var(--card); border-radius: 20px; max-width: 650px; width: 100%; max-height: 85vh; overflow-y: auto; animation: modalIn 0.3s ease; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--light); display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid var(--light); display: flex; gap: 10px; justify-content: flex-end; }
+
+        /* 比赛结果 */
+        .result-panel { text-align: center; padding: 15px; }
+        .result-score { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+        .result-rank { font-size: 1rem; margin-bottom: 15px; }
+        .result-detail { background: var(--bg); border-radius: 10px; padding: 12px; margin: 15px 0; text-align: left; }
+        .result-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--light); }
+        .result-row:last-child { border-bottom: none; }
+        .medal { display: inline-block; padding: 4px 12px; border-radius: 15px; font-weight: bold; color: white; }
+        .medal.gold { background: linear-gradient(135deg, #f1c40f, #f39c12); }
+        .medal.silver { background: linear-gradient(135deg, #bdc3c7, #95a5a6); }
+        .medal.bronze { background: linear-gradient(135deg, #cd6133, #a04000); }
+
+        /* 题目分数表 */
+        .problem-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9rem; }
+        .problem-table th, .problem-table td { padding: 10px; text-align: center; border: 1px solid var(--light); }
+        .problem-table th { background: var(--primary); color: white; }
+        .problem-table td.full-score { background: #d4edda; color: var(--success); font-weight: bold; }
+        .problem-table td.partial-score { background: #fff3cd; color: var(--warning); }
+        .problem-table td.zero-score { background: #f8d7da; color: var(--danger); }
+
+        /* 晋级路线 */
+        .progress-road { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; padding: 10px; background: var(--bg); border-radius: 10px; }
+        .progress-step { padding: 5px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: 600; background: var(--light); color: var(--text-light); }
+        .progress-step.passed { background: var(--success); color: white; }
+        .progress-step.current { background: var(--primary); color: white; }
+        .progress-arrow { color: var(--text-light); }
+
+        /* 结局 */
+        #end-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .end-card { background: var(--card); border-radius: 25px; padding: 40px; max-width: 600px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .end-title { font-size: 2rem; font-weight: bold; color: var(--primary); margin-bottom: 20px; }
+        .end-subtitle { font-size: 1.1rem; color: var(--text-light); margin-bottom: 30px; }
+        .rating-panel { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 15px; padding: 25px; color: white; margin-bottom: 25px; }
+        .rating-score { font-size: 3.5rem; font-weight: bold; margin-bottom: 10px; }
+        .rating-rank { font-size: 1.3rem; margin-bottom: 15px; }
+        .rating-breakdown { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left; }
+        .rating-item { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; }
+        .rating-item-label { font-size: 0.8rem; opacity: 0.8; }
+        .rating-item-value { font-size: 1.2rem; font-weight: bold; }
+        .end-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .stat-box { background: var(--bg); padding: 15px; border-radius: 10px; }
+        .stat-box-value { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        .stat-box-label { font-size: 0.8rem; color: var(--text-light); }
+        .achievement-summary { text-align: left; margin-bottom: 25px; }
+        .achievement-summary-title { font-weight: bold; margin-bottom: 10px; }
+        .achievement-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .achievement-badge { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; background: var(--bg); border-radius: 15px; font-size: 0.85rem; }
+
+        /* Admin */
+        .admin-panel { position: fixed; top: 10px; right: 10px; z-index: 999; }
+        .admin-toggle { width: 40px; height: 40px; border-radius: 50%; background: var(--danger); color: white; border: none; cursor: pointer; font-size: 1.2rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .admin-menu { position: absolute; top: 50px; right: 0; background: var(--card); border-radius: 15px; padding: 20px; width: 280px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .admin-title { font-weight: bold; color: var(--danger); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--light); }
+        .admin-item { margin-bottom: 12px; }
+        .admin-item label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: var(--text-light); }
+        .admin-item input { width: 100%; padding: 8px 10px; border: 2px solid var(--light); border-radius: 8px; font-size: 0.9rem; }
+        .admin-item input:focus { outline: none; border-color: var(--primary); }
+        .admin-btn { width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .admin-btn-apply { background: var(--success); color: white; }
+        .admin-btn-reset { background: var(--warning); color: var(--dark); }
+
+        /* 评级 */
+        .grade-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; color: white; }
+        .grade-S { background: linear-gradient(135deg, #f1c40f, #f39c12); }
+        .grade-A { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .grade-B { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .grade-C { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .grade-D { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
+
+        /* 比赛警告 */
+        .competition-warning { background: var(--danger); color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; animation: shake 0.5s ease; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+        /* 集训选项 */
+        .training-option { background: var(--bg); border-radius: 10px; padding: 15px; margin-bottom: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.3s; }
+        .training-option:hover { border-color: var(--primary); }
+        .training-option.disabled { opacity: 0.5; cursor: not-allowed; }
+        .training-option-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .training-option-name { font-weight: 600; color: var(--primary); }
+        .training-option-cost { font-size: 0.85rem; color: var(--warning); }
+        .training-option-desc { font-size: 0.85rem; color: var(--text-light); }
+        .training-option-effect { font-size: 0.8rem; color: var(--success); margin-top: 8px; }
+
+        /* 响应式 */
+        @media (max-width: 1200px) { .game-container { grid-template-columns: 1fr; } .main-content { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .start-options { flex-direction: column; } .game-header { flex-direction: column; text-align: center; } .game-time { flex-wrap: wrap; justify-content: center; } .rating-breakdown { grid-template-columns: 1fr; } .end-stats { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <!-- 开始界面 -->
+    <div id="start-screen">
+        <h1 class="start-title">OI 个人模拟器</h1>
+        <p class="start-subtitle">体验从入门到IOI的完整OI选手生涯</p>
+        <div class="start-card">
+            <h2>开始新游戏</h2>
+            <div class="form-group">
+                <label>选手姓名</label>
+                <input type="text" id="player-name" placeholder="请输入你的名字" maxlength="10">
+            </div>
+            <div class="form-group">
+                <label>选择起点</label>
+                <div class="start-options">
+                    <div class="start-option" data-start="junior" onclick="selectStart('junior')">
+                        <h3>初二起点</h3>
+                        <p>时间充裕(5年)<br>起点较低<br>成长空间大</p>
+                    </div>
+                    <div class="start-option selected" data-start="senior" onclick="selectStart('senior')">
+                        <h3>高一起点</h3>
+                        <p>时间紧张(3年)<br>起点较高<br>容错率低</p>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="startGame()">开始游戏</button>
+        </div>
+        <p style="margin-top: 20px; color: rgba(255,255,255,0.6); font-size: 0.85rem;">按 ~ 键打开Admin控制台</p>
+        <p style="margin-top: 10px; color: rgba(255,255,255,0.5); font-size: 0.75rem;">
+            Developed by <a href="https://www.luogu.com.cn/user/1380658" target="_blank" style="color: rgba(255,255,255,0.7);">lyx919</a> && GLM-5
+        </p>
+    </div>
+
+    <!-- 游戏主界面 -->
+    <div id="game-screen" class="hidden">
+        <div class="game-header">
+            <div class="game-title">OI 个人模拟器</div>
+            <div class="game-time">
+                <div class="time-item"><div class="label">学年</div><div class="value" id="current-year">1</div></div>
+                <div class="time-item"><div class="label">月份</div><div class="value" id="current-month">9</div></div>
+                <div class="time-item"><div class="label">周数</div><div class="value" id="current-week">1</div></div>
+                <div class="time-item"><div class="label">剩余时间</div><div class="value" id="remaining-time">3年</div></div>
+            </div>
+            <button class="btn btn-danger btn-small" onclick="confirmEnd()">提前退役</button>
+        </div>
+
+        <div id="competition-warning" class="competition-warning hidden" style="margin-bottom: 15px;">
+            <strong>⚠️ 本周有比赛！</strong> <span id="warning-text"></span>
+        </div>
+
+        <div class="game-container">
+            <!-- 左侧面板 -->
+            <div class="left-panels">
+                <div class="panel">
+                    <div class="panel-title">角色信息</div>
+                    <div class="player-name" id="display-name">选手</div>
+                    <div class="player-level" id="player-level">初学者 Lv.1</div>
+                    <div class="attr-section">
+                        <div class="attr-section-title">基础能力</div>
+                        <div id="basic-attrs"></div>
+                    </div>
+                    <div class="attr-section">
+                        <div class="attr-section-title">知识点</div>
+                        <div id="skill-attrs"></div>
+                    </div>
+                    <div class="attr-section">
+                        <div class="attr-section-title">状态</div>
+                        <div class="status-item"><span class="status-name">压力</span><span class="status-value pressure" id="val-pressure">0</span></div>
+                        <div class="status-item"><span class="status-name">金钱</span><span class="status-value money" id="val-money">1000</span></div>
+                        <div class="status-item"><span class="status-name">RP</span><span class="status-value rp" id="val-rp">50</span></div>
+                        <div class="status-item"><span class="status-name">题量</span><span class="status-value" id="val-problems">0</span></div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">教练关系</div>
+                    <div id="coach-list"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">成就 <span id="achievement-count">0/22</span></div>
+                    <div id="achievement-list"></div>
+                </div>
+            </div>
+
+            <!-- 右侧主内容 -->
+            <div class="main-content">
+                <div class="section-panel">
+                    <div class="section-title">📚 专题训练</div>
+                    <div class="action-grid" id="training-grid"></div>
+                </div>
+                <div class="section-panel">
+                    <div class="section-title">🌟 洛谷刷题</div>
+                    <div class="action-grid" id="luogu-grid"></div>
+                    <div style="margin-top: 15px; padding: 10px; background: var(--bg); border-radius: 8px; font-size: 0.85rem;">当前题量：<strong id="luogu-count">0</strong> 题</div>
+                </div>
+                <div class="section-panel">
+                    <div class="section-title">🏆 正式比赛 <span style="font-size: 0.8rem; color: var(--danger);">（自动参加）</span></div>
+                    <div class="progress-road" id="progress-road"></div>
+                    <div class="competition-list" id="competition-list"></div>
+                </div>
+                <div class="section-panel">
+                    <div class="section-title">🌐 网上赛事</div>
+                    <div class="action-grid" id="online-grid"></div>
+                </div>
+                <div class="section-panel">
+                    <div class="section-title">👨‍🏫 教练集训</div>
+                    <div id="coach-interact-list"></div>
+                </div>
+                <div class="section-panel">
+                    <div class="section-title">😴 休息放松</div>
+                    <div class="action-grid" id="rest-grid"></div>
+                    <div style="margin-top: 15px; padding: 10px; background: var(--bg); border-radius: 8px;"><p style="font-size: 0.85rem;">当前压力：<span id="pressure-status" style="font-weight: bold;">0</span>/100</p></div>
+                </div>
+                <div class="section-panel" style="grid-column: span 2;">
+                    <div class="section-title">📋 事件日志</div>
+                    <div class="log-list" id="log-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-container"></div>
+
+    <!-- Admin面板 -->
+    <div class="admin-panel hidden" id="admin-panel">
+        <button class="admin-toggle" onclick="toggleAdminMenu()">⚙</button>
+        <div class="admin-menu hidden" id="admin-menu">
+            <div class="admin-title">⚙ Admin 控制台</div>
+            <div class="admin-item"><label>思维能力</label><input type="number" id="admin-thinking" min="0"></div>
+            <div class="admin-item"><label>编程能力</label><input type="number" id="admin-coding" min="0"></div>
+            <div class="admin-item"><label>心理素质</label><input type="number" id="admin-mental" min="0"></div>
+            <div class="admin-item"><label>金钱</label><input type="number" id="admin-money" min="0"></div>
+            <div class="admin-item"><label>RP值</label><input type="number" id="admin-rp" min="0" max="100"></div>
+            <div class="admin-item"><label>压力</label><input type="number" id="admin-pressure" min="0" max="100"></div>
+            <button class="admin-btn admin-btn-apply" onclick="applyAdmin()">应用修改</button>
+            <button class="admin-btn admin-btn-reset" onclick="resetGame()">重新开始</button>
+        </div>
+    </div>
+
+    <!-- 结局界面 -->
+    <div id="end-screen" class="hidden">
+        <div class="end-card">
+            <h1 class="end-title" id="end-title">OI生涯结束</h1>
+            <p class="end-subtitle" id="end-subtitle">你的OI之旅告一段落</p>
+            <div class="rating-panel">
+                <div class="rating-score" id="rating-score">0</div>
+                <div class="rating-rank" id="rating-rank">评级</div>
+                <div class="rating-breakdown">
+                    <div class="rating-item"><div class="rating-item-label">比赛成绩</div><div class="rating-item-value" id="rating-competition">0</div></div>
+                    <div class="rating-item"><div class="rating-item-label">成长历程</div><div class="rating-item-value" id="rating-growth">0</div></div>
+                    <div class="rating-item"><div class="rating-item-label">刷题数量</div><div class="rating-item-value" id="rating-problems">0</div></div>
+                    <div class="rating-item"><div class="rating-item-label">社交关系</div><div class="rating-item-value" id="rating-social">0</div></div>
+                </div>
+            </div>
+            <div class="end-stats">
+                <div class="stat-box"><div class="stat-box-value" id="stat-problems">0</div><div class="stat-box-label">刷题总数</div></div>
+                <div class="stat-box"><div class="stat-box-value" id="stat-competitions">0</div><div class="stat-box-label">参赛次数</div></div>
+                <div class="stat-box"><div class="stat-box-value" id="stat-medals">0</div><div class="stat-box-label">获得奖牌</div></div>
+            </div>
+            <div class="achievement-summary">
+                <div class="achievement-summary-title">达成成就</div>
+                <div class="achievement-list" id="end-achievements"></div>
+            </div>
+            <button class="btn btn-primary" onclick="location.reload()">重新开始</button>
+            <p style="margin-top: 20px; color: var(--text-light); font-size: 0.75rem;">
+                Developed by <a href="https://www.luogu.com.cn/user/1380658" target="_blank" style="color: var(--primary);">lyx919</a> && GLM-5
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        const CONFIG = { juniorYears: 5, seniorYears: 3, weeksPerMonth: 4, monthsPerYear: 12, startMonth: 9 };
+
+        // 评级系统
+        function getGrade(value) {
+            if (value >= 150) return { grade: 'S', name: '传说', color: '#f1c40f' };
+            if (value >= 120) return { grade: 'A', name: '大师', color: '#e74c3c' };
+            if (value >= 100) return { grade: 'B', name: '精通', color: '#9b59b6' };
+            if (value >= 70) return { grade: 'C', name: '熟练', color: '#3498db' };
+            return { grade: 'D', name: '入门', color: '#95a5a6' };
+        }
+
+        // 教练数据
+        const COACHES = [
+            { id: 'zhang', name: '张老师', specialty: ['ds', 'dp'], specialtyName: '数据结构、DP', style: 'strict', styleName: '严格型', resources: 50, description: '严厉但有实力' },
+            { id: 'li', name: '李老师', specialty: ['graph', 'math'], specialtyName: '图论、数学', style: 'gentle', styleName: '温和型', resources: 70, description: '人脉广阔' },
+            { id: 'wang', name: '王教练', specialty: ['string', 'graph'], specialtyName: '字符串、图论', style: 'free', styleName: '放养型', resources: 90, description: '资源丰富' },
+            { id: 'chen', name: '陈学长', specialty: ['ds', 'dp', 'graph', 'string', 'math'], specialtyName: '全能', style: 'friend', styleName: '朋友型', resources: 20, description: '亦师亦友' },
+            { id: 'mystery', name: '???', specialty: ['dp'], specialtyName: '未知', style: 'strict', styleName: '神秘', resources: 100, description: '传说教练', locked: true }
+        ];
+
+        // ==================== CCF NOI大纲知识点体系 ====================
+        // 难度系数说明：入门级1-5，提高级5-8，NOI级7-10
+        const KNOWLEDGE_POINTS = {
+            // ===== 入门级（难度1-5）=====
+            // 基础知识
+            computer_basic: { name: '计算机基础', category: 'basic', difficulty: 1, level: 'entry' },
+            os_basic: { name: '操作系统基础', category: 'basic', difficulty: 1, level: 'entry' },
+            network_basic: { name: '网络基础', category: 'basic', difficulty: 1, level: 'entry' },
+            history: { name: '计算机历史', category: 'basic', difficulty: 1, level: 'entry' },
+            
+            // C++编程基础
+            basic_syntax: { name: '基本语法', category: 'cpp', difficulty: 1, level: 'entry' },
+            data_types: { name: '基本数据类型', category: 'cpp', difficulty: 1, level: 'entry' },
+            control_flow: { name: '流程控制', category: 'cpp', difficulty: 2, level: 'entry' },
+            functions: { name: '函数', category: 'cpp', difficulty: 2, level: 'entry' },
+            arrays: { name: '数组', category: 'cpp', difficulty: 2, level: 'entry' },
+            strings: { name: '字符串基础', category: 'cpp', difficulty: 2, level: 'entry' },
+            pointers: { name: '指针基础', category: 'cpp', difficulty: 3, level: 'entry' },
+            structs: { name: '结构体', category: 'cpp', difficulty: 3, level: 'entry' },
+            stl_basic: { name: 'STL基础容器', category: 'cpp', difficulty: 4, level: 'entry' },
+            
+            // 数据结构（入门级）
+            linear_table: { name: '线性表', category: 'ds', difficulty: 2, level: 'entry' },
+            stack: { name: '栈', category: 'ds', difficulty: 3, level: 'entry' },
+            queue: { name: '队列', category: 'ds', difficulty: 3, level: 'entry' },
+            simple_tree: { name: '简单树结构', category: 'ds', difficulty: 4, level: 'entry' },
+            
+            // 算法（入门级）
+            enumeration: { name: '枚举', category: 'algo', difficulty: 1, level: 'entry' },
+            simulation: { name: '模拟', category: 'algo', difficulty: 2, level: 'entry' },
+            simple_sort: { name: '基础排序', category: 'algo', difficulty: 2, level: 'entry' },
+            greedy_basic: { name: '贪心入门', category: 'algo', difficulty: 3, level: 'entry' },
+            binary_search: { name: '二分查找', category: 'algo', difficulty: 3, level: 'entry' },
+            divide_conquer: { name: '分治算法', category: 'algo', difficulty: 4, level: 'entry' },
+            recursion: { name: '递归', category: 'algo', difficulty: 4, level: 'entry' },
+            prefix_sum: { name: '前缀和', category: 'algo', difficulty: 4, level: 'entry' },
+            difference: { name: '差分', category: 'algo', difficulty: 4, level: 'entry' },
+            simple_dp: { name: '简单动态规划', category: 'algo', difficulty: 5, level: 'entry' },
+            bfs_basic: { name: 'BFS基础', category: 'algo', difficulty: 4, level: 'entry' },
+            dfs_basic: { name: 'DFS基础', category: 'algo', difficulty: 4, level: 'entry' },
+            
+            // 数学（入门级）
+            number_system: { name: '进制转换', category: 'math', difficulty: 2, level: 'entry' },
+            gcd_lcm: { name: 'GCD与LCM', category: 'math', difficulty: 3, level: 'entry' },
+            prime: { name: '素数判定', category: 'math', difficulty: 3, level: 'entry' },
+            permutation_basic: { name: '排列组合基础', category: 'math', difficulty: 4, level: 'entry' },
+            
+            // ===== 提高级（难度5-8）=====
+            // 数据结构（提高级）
+            heap: { name: '堆', category: 'ds', difficulty: 5, level: 'advanced' },
+            binary_tree: { name: '二叉树', category: 'ds', difficulty: 5, level: 'advanced' },
+            bst: { name: '二叉搜索树', category: 'ds', difficulty: 5, level: 'advanced' },
+            segment_tree_basic: { name: '线段树基础', category: 'ds', difficulty: 6, level: 'advanced' },
+            union_find: { name: '并查集', category: 'ds', difficulty: 5, level: 'advanced' },
+            trie: { name: 'Trie树', category: 'ds', difficulty: 5, level: 'advanced' },
+            hash_table: { name: '哈希表', category: 'ds', difficulty: 5, level: 'advanced' },
+            tree_array: { name: '树状数组', category: 'ds', difficulty: 6, level: 'advanced' },
+            monotonic_stack: { name: '单调栈', category: 'ds', difficulty: 6, level: 'advanced' },
+            monotonic_queue: { name: '单调队列', category: 'ds', difficulty: 6, level: 'advanced' },
+            sparse_table: { name: 'ST表', category: 'ds', difficulty: 6, level: 'advanced' },
+            
+            // 图论（提高级）
+            graph_basic: { name: '图的基本概念', category: 'graph', difficulty: 5, level: 'advanced' },
+            topo_sort: { name: '拓扑排序', category: 'graph', difficulty: 5, level: 'advanced' },
+            shortest_path: { name: '最短路', category: 'graph', difficulty: 6, level: 'advanced' },
+            mst: { name: '最小生成树', category: 'graph', difficulty: 6, level: 'advanced' },
+            dag: { name: 'DAG与拓扑', category: 'graph', difficulty: 6, level: 'advanced' },
+            
+            // 动态规划（提高级）
+            linear_dp: { name: '线性DP', category: 'dp', difficulty: 5, level: 'advanced' },
+            tree_dp: { name: '树形DP', category: 'dp', difficulty: 6, level: 'advanced' },
+            knapsack: { name: '背包DP', category: 'dp', difficulty: 5, level: 'advanced' },
+            interval_dp: { name: '区间DP', category: 'dp', difficulty: 6, level: 'advanced' },
+            state_dp: { name: '状压DP', category: 'dp', difficulty: 7, level: 'advanced' },
+            digit_dp: { name: '数位DP', category: 'dp', difficulty: 7, level: 'advanced' },
+            
+            // 字符串（提高级）
+            kmp: { name: 'KMP算法', category: 'string', difficulty: 6, level: 'advanced' },
+            string_hash: { name: '字符串哈希', category: 'string', difficulty: 5, level: 'advanced' },
+            
+            // 数学（提高级）
+            fast_power: { name: '快速幂', category: 'math', difficulty: 5, level: 'advanced' },
+            modular_arith: { name: '模运算', category: 'math', difficulty: 5, level: 'advanced' },
+            euler: { name: '欧拉函数', category: 'math', difficulty: 6, level: 'advanced' },
+            matrix: { name: '矩阵运算', category: 'math', difficulty: 6, level: 'advanced' },
+            inclusion_exclusion: { name: '容斥原理', category: 'math', difficulty: 7, level: 'advanced' },
+            
+            // ===== NOI级（难度7-10）=====
+            // 数据结构（NOI级）
+            segment_tree_adv: { name: '线段树进阶', category: 'ds', difficulty: 8, level: 'noi' },
+            lazy_propagation: { name: '懒标记', category: 'ds', difficulty: 7, level: 'noi' },
+            persistent_ds: { name: '可持久化数据结构', category: 'ds', difficulty: 8, level: 'noi' },
+            lca: { name: 'LCA', category: 'ds', difficulty: 7, level: 'noi' },
+            heavy_light: { name: '树链剖分', category: 'ds', difficulty: 8, level: 'noi' },
+            virtual_tree: { name: '虚树', category: 'ds', difficulty: 8, level: 'noi' },
+            block_list: { name: '分块', category: 'ds', difficulty: 7, level: 'noi' },
+            mo_algo: { name: '莫队算法', category: 'ds', difficulty: 8, level: 'noi' },
+            
+            // 图论（NOI级）
+            network_flow: { name: '网络流', category: 'graph', difficulty: 8, level: 'noi' },
+            bipartite: { name: '二分图匹配', category: 'graph', difficulty: 8, level: 'noi' },
+            scc: { name: '强连通分量', category: 'graph', difficulty: 7, level: 'noi' },
+            edcc_vdcc: { name: '双连通分量', category: 'graph', difficulty: 8, level: 'noi' },
+            
+            // 动态规划（NOI级）
+            complex_dp: { name: '复杂DP模型', category: 'dp', difficulty: 9, level: 'noi' },
+            dp_optimization: { name: 'DP优化', category: 'dp', difficulty: 9, level: 'noi' },
+            
+            // 字符串（NOI级）
+            sa: { name: '后缀数组', category: 'string', difficulty: 8, level: 'noi' },
+            sam: { name: '后缀自动机', category: 'string', difficulty: 9, level: 'noi' },
+            ac_auto: { name: 'AC自动机', category: 'string', difficulty: 8, level: 'noi' },
+            
+            // 数学（NOI级）
+            linear_basis: { name: '线性基', category: 'math', difficulty: 8, level: 'noi' },
+            fft: { name: 'FFT/NTT', category: 'math', difficulty: 9, level: 'noi' },
+            chinese_remainder: { name: '中国剩余定理', category: 'math', difficulty: 7, level: 'noi' },
+            bsgs: { name: 'BSGS', category: 'math', difficulty: 8, level: 'noi' }
+        };
+
+        // 比赛数据 - 基于CCF大纲设计
+        const COMPETITIONS = {
+            csp_s_primary: { 
+                name: 'CSP-S初赛', level: 1, month: 10, week: 1, requireScore: 0, 
+                baseParticipants: 5000, description: '提高级笔试初赛',
+                totalScore: 100, problemCount: 1, 
+                problems: [{ 
+                    name: '笔试', fullScore: 100, difficulty: 2, type: '理论',
+                    knowledgePoints: ['computer_basic', 'os_basic', 'network_basic', 'history']
+                }]
+            },
+            csp_s: { 
+                name: 'CSP-S复赛', level: 2, month: 10, week: 3, requireScore: 50, requireComp: 'csp_s_primary',
+                baseParticipants: 2000, description: '提高级机试复赛',
+                totalScore: 400, problemCount: 4, 
+                levelRange: 'entry',
+                problems: [
+                    { name: 'T1', fullScore: 100, difficulty: 3, type: '签到题', knowledgePoints: ['enumeration', 'simulation'] },
+                    { name: 'T2', fullScore: 100, difficulty: 4, type: '基础题', knowledgePoints: ['arrays', 'greedy_basic', 'prefix_sum'] },
+                    { name: 'T3', fullScore: 100, difficulty: 5, type: '中档题', knowledgePoints: ['simple_dp', 'dfs_basic', 'binary_search'] },
+                    { name: 'T4', fullScore: 100, difficulty: 5, type: '较难题', knowledgePoints: ['recursion', 'simple_tree', 'divide_conquer'] }
+                ]
+            },
+            noip: { 
+                name: 'NOIP', level: 3, month: 11, week: 2, requireScore: 55, requireComp: 'csp_s',
+                baseParticipants: 1000, description: '全国青少年信息学奥林匹克联赛',
+                totalScore: 400, problemCount: 4,
+                levelRange: 'mixed',
+                problems: [
+                    { name: 'T1', fullScore: 100, difficulty: 4, type: '签到题', knowledgePoints: ['simulation', 'stl_basic'] },
+                    { name: 'T2', fullScore: 100, difficulty: 5, type: '基础题', knowledgePoints: ['greedy_basic', 'binary_search', 'prefix_sum'] },
+                    { name: 'T3', fullScore: 100, difficulty: 6, type: '中档题', knowledgePoints: ['linear_dp', 'union_find', 'heap'] },
+                    { name: 'T4', fullScore: 100, difficulty: 7, type: '较难题', knowledgePoints: ['tree_dp', 'segment_tree_basic', 'shortest_path'] }
+                ]
+            },
+            provincial: { 
+                name: '省选', level: 4, month: 4, week: 2, requireScore: 60, requireComp: 'noip',
+                baseParticipants: 150, description: '省队选拔赛',
+                totalScore: 300, problemCount: 3,
+                levelRange: 'advanced',
+                problems: [
+                    { name: 'T1', fullScore: 100, difficulty: 6, type: '中档题', knowledgePoints: ['tree_array', 'knapsack', 'graph_basic'] },
+                    { name: 'T2', fullScore: 100, difficulty: 7, type: '较难题', knowledgePoints: ['state_dp', 'shortest_path', 'trie'] },
+                    { name: 'T3', fullScore: 100, difficulty: 8, type: '难题', knowledgePoints: ['segment_tree_basic', 'lazy_propagation', 'network_flow'] }
+                ]
+            },
+            noi: { 
+                name: 'NOI', level: 5, month: 7, week: 3, requireScore: 70, requireComp: 'provincial',
+                baseParticipants: 350, description: '全国青少年信息学奥林匹克竞赛',
+                totalScore: 600, problemCount: 6,
+                levelRange: 'noi',
+                problems: [
+                    { name: 'D1T1', fullScore: 100, difficulty: 5, type: '签到题', knowledgePoints: ['greedy_basic', 'simple_dp'] },
+                    { name: 'D1T2', fullScore: 100, difficulty: 7, type: '中档题', knowledgePoints: ['segment_tree_basic', 'lca', 'interval_dp'] },
+                    { name: 'D1T3', fullScore: 100, difficulty: 9, type: '难题', knowledgePoints: ['persistent_ds', 'complex_dp', 'network_flow'] },
+                    { name: 'D2T1', fullScore: 100, difficulty: 6, type: '基础题', knowledgePoints: ['state_dp', 'binary_tree', 'bfs_basic'] },
+                    { name: 'D2T2', fullScore: 100, difficulty: 8, type: '较难题', knowledgePoints: ['heavy_light', 'dp_optimization', 'scc'] },
+                    { name: 'D2T3', fullScore: 100, difficulty: 9, type: '难题', knowledgePoints: ['sam', 'fft', 'linear_basis'] }
+                ]
+            },
+            ctsc: { 
+                name: '国家队选拔(CTSC)', level: 6, month: 5, week: 1, requireScore: 75, requireComp: 'noi',
+                baseParticipants: 50, description: '中国国家队选拔赛',
+                totalScore: 300, problemCount: 3,
+                levelRange: 'noi',
+                problems: [
+                    { name: 'T1', fullScore: 100, difficulty: 8, type: '较难题', knowledgePoints: ['heavy_light', 'dp_optimization', 'sa'] },
+                    { name: 'T2', fullScore: 100, difficulty: 9, type: '难题', knowledgePoints: ['network_flow', 'persistent_ds', 'complex_dp'] },
+                    { name: 'T3', fullScore: 100, difficulty: 10, type: '神题', knowledgePoints: ['fft', 'sam', 'linear_basis'] }
+                ]
+            },
+            ioi: { 
+                name: 'IOI', level: 7, month: 8, week: 2, requireScore: 85, requireComp: 'ctsc',
+                baseParticipants: 4, description: '国际信息学奥林匹克竞赛',
+                totalScore: 600, problemCount: 6,
+                levelRange: 'noi',
+                problems: [
+                    { name: 'D1T1', fullScore: 100, difficulty: 6, type: '基础题', knowledgePoints: ['linear_dp', 'graph_basic'] },
+                    { name: 'D1T2', fullScore: 100, difficulty: 8, type: '中档题', knowledgePoints: ['segment_tree_adv', 'dp_optimization'] },
+                    { name: 'D1T3', fullScore: 100, difficulty: 9, type: '难题', knowledgePoints: ['persistent_ds', 'fft', 'complex_dp'] },
+                    { name: 'D2T1', fullScore: 100, difficulty: 7, type: '中档题', knowledgePoints: ['state_dp', 'network_flow'] },
+                    { name: 'D2T2', fullScore: 100, difficulty: 9, type: '难题', knowledgePoints: ['sam', 'heavy_light', 'mo_algo'] },
+                    { name: 'D2T3', fullScore: 100, difficulty: 10, type: '神题', knowledgePoints: ['linear_basis', 'dp_optimization', 'fft'] }
+                ]
+            }
+        };
+
+        // 集训类型
+        const TRAINING_TYPES = [
+            { id: 'basic', name: '基础巩固', desc: '巩固基础算法知识', weeks: 1, cost: 0, effect: { thinking: 3, coding: 3, mental: 2 }, requireRelation: 10 },
+            { id: 'topic', name: '专题突破', desc: '针对薄弱知识点专项训练', weeks: 2, cost: 300, effect: { specialty: 12, thinking: 4 }, requireRelation: 30 },
+            { id: 'mock', name: '模拟训练', desc: '模拟真实比赛环境', weeks: 1, cost: 200, effect: { thinking: 4, coding: 4, mental: 8 }, requireRelation: 40 },
+            { id: 'intensive', name: '强化集训', desc: '高强度封闭集训', weeks: 3, cost: 800, effect: { thinking: 10, coding: 10, mental: 5, allSkill: 6 }, requireRelation: 60 },
+            { id: 'master', name: '名师指导', desc: '一对一精细指导', weeks: 2, cost: 1500, effect: { thinking: 12, coding: 12, mental: 10, allSkill: 10 }, requireRelation: 80 }
+        ];
+
+        // 礼物系统
+        const GIFTS = {
+            // 饮品类
+            coffee: { name: '星巴克咖啡', category: 'drink', price: 35, baseEffect: 5, icon: '☕', desc: '一杯香浓的咖啡' },
+            milktea: { name: '奶茶', category: 'drink', price: 18, baseEffect: 3, icon: '🧋', desc: '甜甜的奶茶' },
+            juice: { name: '鲜榨果汁', category: 'drink', price: 25, baseEffect: 4, icon: '🧃', desc: '健康饮品' },
+            energy_drink: { name: '功能饮料', category: 'drink', price: 15, baseEffect: 3, icon: '🥤', desc: '熬夜必备' },
+            
+            // 食品类
+            snack: { name: '零食大礼包', category: 'food', price: 50, baseEffect: 6, icon: '🍪', desc: '各种美味零食' },
+            cake: { name: '精美蛋糕', category: 'food', price: 88, baseEffect: 8, icon: '🎂', desc: '生日蛋糕' },
+            fruit: { name: '水果篮', category: 'food', price: 68, baseEffect: 7, icon: '🍎', desc: '新鲜水果' },
+            chocolate: { name: '进口巧克力', category: 'food', price: 78, baseEffect: 7, icon: '🍫', desc: '甜蜜的礼物' },
+            
+            // 日用品类
+            notebook: { name: '精美笔记本', category: 'item', price: 45, baseEffect: 5, icon: '📓', desc: '记录灵感' },
+            pen: { name: '钢笔礼盒', category: 'item', price: 120, baseEffect: 10, icon: '🖊️', desc: '高档钢笔' },
+            mug: { name: '定制马克杯', category: 'item', price: 55, baseEffect: 6, icon: '☕', desc: '温暖的杯子' },
+            
+            // 数码类
+            mouse: { name: '游戏鼠标', category: 'tech', price: 199, baseEffect: 15, icon: '🖱️', desc: '电竞鼠标' },
+            keyboard: { name: '机械键盘', category: 'tech', price: 399, baseEffect: 25, icon: '⌨️', desc: '青轴键盘' },
+            headphones: { name: '降噪耳机', category: 'tech', price: 599, baseEffect: 35, icon: '🎧', desc: '专注学习' },
+            usb: { name: '定制U盘', category: 'tech', price: 88, baseEffect: 8, icon: '💾', desc: '存储资料' },
+            
+            // 书籍类
+            book_algo: { name: '算法竞赛入门经典', category: 'book', price: 68, baseEffect: 8, icon: '📚', desc: '经典教材' },
+            book_adv: { name: '算法竞赛进阶指南', category: 'book', price: 88, baseEffect: 10, icon: '📖', desc: '进阶必备' },
+            book_math: { name: '具体数学', category: 'book', price: 108, baseEffect: 12, icon: '📕', desc: '数学之美' },
+            
+            // 高档礼物
+            watch: { name: '名牌手表', category: 'luxury', price: 1999, baseEffect: 50, icon: '⌚', desc: '高端大气' },
+            phone: { name: '新款手机', category: 'luxury', price: 3999, baseEffect: 80, icon: '📱', desc: '顶配手机' },
+            laptop: { name: '轻薄笔记本', category: 'luxury', price: 6999, baseEffect: 100, icon: '💻', desc: '生产力工具' },
+            souvenir: { name: 'NOI纪念品', category: 'luxury', price: 288, baseEffect: 20, icon: '🏆', desc: '官方周边' }
+        };
+
+        // 教练喜好 - 每个教练有喜欢和讨厌的礼物类型
+        const COACH_PREFERENCES = {
+            zhang: { like: ['book', 'tech', 'item'], dislike: ['food'], bonus: 1.5 },
+            li: { like: ['food', 'drink', 'luxury'], dislike: ['tech'], bonus: 1.4 },
+            wang: { like: ['tech', 'luxury'], dislike: ['drink'], bonus: 1.6 },
+            chen: { like: ['drink', 'food', 'item'], dislike: ['luxury'], bonus: 1.3 },
+            mystery: { like: ['book', 'luxury'], dislike: ['food', 'drink'], bonus: 2.0 }
+        };
+
+        // 网上赛事
+        const ONLINE_CONTESTS = [
+            { name: 'Codeforces Round', difficulty: 72, reward: 4 },
+            { name: 'AtCoder ABC', difficulty: 52, reward: 3 },
+            { name: '洛谷月赛', difficulty: 65, reward: 3 },
+            { name: '牛客小白赛', difficulty: 48, reward: 2 },
+            { name: 'Codeforces Div1+2', difficulty: 78, reward: 5 },
+            { name: 'AtCoder ARC', difficulty: 82, reward: 5 }
+        ];
+
+        // 成就
+        const ACHIEVEMENTS = [
+            { id: 'first_problem', name: '初出茅庐', desc: '完成第一道题目', icon: '🌱' },
+            { id: 'problem_100', name: '刷题达人', desc: '累计刷题100道', icon: '📚' },
+            { id: 'problem_500', name: '题海无涯', desc: '累计刷题500道', icon: '🌊' },
+            { id: 'problem_1000', name: '千题斩', desc: '累计刷题1000道', icon: '⚔️' },
+            { id: 'csp_s_gold', name: 'CSP-S一等', desc: 'CSP-S获得一等奖', icon: '🥇' },
+            { id: 'noip_gold', name: 'NOIP一等奖', desc: 'NOIP获得一等奖', icon: '🏆' },
+            { id: 'provincial_team', name: '省队成员', desc: '成功入选省队', icon: '⭐' },
+            { id: 'noi_bronze', name: 'NOI铜牌', desc: 'NOI获得铜牌', icon: '🥉' },
+            { id: 'noi_silver', name: 'NOI银牌', desc: 'NOI获得银牌', icon: '🥈' },
+            { id: 'noi_gold', name: 'NOI金牌', desc: 'NOI获得金牌', icon: '👑' },
+            { id: 'national_team', name: '国家队成员', desc: '入选国家队', icon: '🏅' },
+            { id: 'ioi_medal', name: 'IOI奖牌', desc: 'IOI获得奖牌', icon: '🌍' },
+            { id: 'ioi_gold', name: 'IOI金牌', desc: 'IOI获得金牌', icon: '🌟' },
+            { id: 'coach_master', name: '人脉大师', desc: '与所有教练达成挚友', icon: '🤝' },
+            { id: 'ak', name: 'AK比赛', desc: '在某场比赛中获得满分', icon: '💯' },
+            { id: 'provincial_gold', name: '省选第一', desc: '省选获得金牌', icon: '🎖️' },
+            { id: 'ctsc_qualified', name: 'CTSC晋级', desc: '通过CTSC选拔', icon: '🎯' },
+            { id: 'gift_master', name: '送礼达人', desc: '累计送礼20次', icon: '🎁' },
+            { id: 'coach_friend', name: '良师益友', desc: '与任意教练达到挚友', icon: '💚' },
+            { id: 'lucky', name: '欧皇附体', desc: 'RP达到95', icon: '🍀' },
+            { id: 'rich', name: '小富翁', desc: '金钱达到10000', icon: '💰' },
+            { id: 'hardworker', name: '勤奋刻苦', desc: '累计训练100周', icon: '💪' }
+        ];
+
+        // 随机事件
+        const EVENTS = {
+            positive: [
+                { name: '灵感爆发', desc: '突然对某个算法有了深刻理解', effect: { thinking: 5 }, chance: 4 },
+                { name: '遇到好题', desc: '发现了一道质量很高的题目', effect: { problems: 3, dp: 3 }, chance: 6 },
+                { name: '学长的笔记', desc: '得到学长的笔记', effect: { coding: 3, mental: 2 }, chance: 3 },
+                { name: '心情愉快', desc: '今天状态特别好', effect: { mental: 5, pressure: -10 }, chance: 5 },
+                { name: 'RP爆发', desc: '运气特别好', effect: { rp: 8 }, chance: 2 },
+                { name: 'AC快感', desc: '终于AC了一道难题，成就感爆棚', effect: { mental: 8, coding: 2, pressure: -8 }, chance: 3 },
+                { name: '思路贯通', desc: '之前困惑的问题突然想通了', effect: { thinking: 6, allSkill: 2 }, chance: 3 },
+                { name: '找到宝藏博客', desc: '发现一个大神的博客，收获满满', effect: { allSkill: 3, problems: 2 }, chance: 4 },
+                { name: '同学校友交流', desc: '和OI大佬交流学到很多', effect: { thinking: 3, coding: 3, mental: 2 }, chance: 3 },
+                { name: '父母支持', desc: '父母理解并支持你的OI之路', effect: { mental: 6, money: 200, pressure: -15 }, chance: 2 },
+                { name: '比赛超常发挥', desc: '模拟赛发挥出色，信心倍增', effect: { mental: 5, rp: 5 }, chance: 2, condition: (g) => g.pressure < 50 }
+            ],
+            negative: [
+                { name: '感冒发烧', desc: '身体不适', effect: { pressure: 20, mental: -5 }, chance: 3 },
+                { name: '心态爆炸', desc: '比赛失误，心态崩溃', effect: { mental: -8, pressure: 25 }, chance: 2 },
+                { name: '电脑故障', desc: '电脑出了问题', effect: { pressure: 15 }, chance: 4 },
+                { name: '家人反对', desc: '家人不理解', effect: { mental: -5, pressure: 15, money: -100 }, chance: 2 },
+                { name: 'WA到怀疑人生', desc: '一道题WA了无数次', effect: { pressure: 18, mental: -4, coding: 1 }, chance: 4 },
+                { name: 'TLE卡常', desc: '代码被卡常了，很烦躁', effect: { pressure: 12, coding: 2 }, chance: 3 },
+                { name: '比赛失误', desc: '比赛时犯低级错误', effect: { mental: -6, pressure: 15, rp: -5 }, chance: 2 },
+                { name: '作业堆积', desc: '文化课作业太多', effect: { pressure: 20, mental: -3 }, chance: 4 },
+                { name: '考期临近', desc: '文化课考试压力', effect: { pressure: 18, mental: -2 }, chance: 3 },
+                { name: '睡眠不足', desc: '熬夜太多，精神不好', effect: { pressure: 15, mental: -5, thinking: -2 }, chance: 3, condition: (g) => g.pressure > 40 },
+                { name: 'CF掉分', desc: 'Codeforces比赛掉分了', effect: { pressure: 12, mental: -4, rp: -3 }, chance: 2 }
+            ],
+            special: [
+                { name: '神秘导师现身', desc: '传说中的教练愿意指导你', effect: { unlockCoach: 'mystery' }, chance: 1, condition: (g) => g.problems >= 300 },
+                { name: '收到集训邀请', desc: '收到名校集训邀请', effect: { money: 500, allSkill: 3 }, chance: 1, condition: (g) => g.bestCompetition && COMPETITIONS[g.bestCompetition].level >= 4 },
+                { name: '发现宝藏OJ', desc: '发现一个宝藏题库', effect: { problems: 8, allSkill: 4 }, chance: 1, condition: (g) => g.problems >= 150 },
+                { name: '比赛真题重现', desc: '刷到了去年比赛原题！', effect: { thinking: 5, rp: 10, allSkill: 2 }, chance: 0.5, condition: (g) => g.problems >= 200 },
+                { name: '意外获奖学金', desc: '因OI成绩获得奖学金', effect: { money: 1000, mental: 5 }, chance: 0.8, condition: (g) => g.bestCompetition && COMPETITIONS[g.bestCompetition].level >= 3 },
+                { name: '名校特招信息', desc: '收到名校特招信息', effect: { mental: 8, rp: 5, pressure: -10 }, chance: 0.5, condition: (g) => g.competitionResults.noi?.medal },
+                { name: '教练请客', desc: '教练请吃饭庆祝进步', effect: { pressure: -20, mental: 5, money: 50 }, chance: 1, condition: (g) => Object.values(g.coaches).some(c => c.relation >= 60) },
+                { name: '队友讨论', desc: '和队友讨论问题收获很大', effect: { thinking: 4, allSkill: 3 }, chance: 1.5, condition: (g) => g.competitionResults.provincial?.qualified }
+            ]
+        };
+
+        // ==================== 游戏状态 ====================
+        let game = null;
+
+        function initGame(playerName, startType) {
+            const isSenior = startType === 'senior';
+            const totalYears = isSenior ? CONFIG.seniorYears : CONFIG.juniorYears;
+            const baseAttrs = isSenior ? 50 : 32;
+            const randomRange = 18;
+            
+            game = {
+                playerName: playerName || '匿名选手',
+                startType, isSenior, totalYears,
+                currentYear: 1, currentMonth: 9, currentWeek: 1,
+                thinking: randomAttr(baseAttrs, randomRange),
+                coding: randomAttr(baseAttrs, randomRange),
+                mental: randomAttr(baseAttrs, randomRange),
+                ds: randomAttr(baseAttrs - 12, randomRange),
+                graph: randomAttr(baseAttrs - 12, randomRange),
+                string: randomAttr(baseAttrs - 12, randomRange),
+                dp: randomAttr(baseAttrs - 12, randomRange),
+                math: randomAttr(baseAttrs - 12, randomRange),
+                pressure: 0,
+                money: isSenior ? 2000 : 1000,
+                rp: randomAttr(50, 25),
+                problems: 0,
+                coaches: {},
+                competitionResults: {},
+                bestCompetition: null,
+                competitionsEntered: 0,
+                medals: { gold: 0, silver: 0, bronze: 0 },
+                achievements: [],
+                logs: [],
+                competitionQueue: [],
+                hasAK: false,
+                giftCount: 0,
+                trainWeeks: 0,
+                // 知识点掌握度 (0-100)
+                knowledge: {}
+            };
+            
+            // 初始化知识点掌握度
+            Object.keys(KNOWLEDGE_POINTS).forEach(kp => {
+                // 根据起点类型给予不同的初始知识点
+                const point = KNOWLEDGE_POINTS[kp];
+                let baseValue = 0;
+                
+                if (game.isSenior) {
+                    // 高中起点：入门级知识点有一定基础
+                    if (point.level === 'entry') {
+                        baseValue = Math.floor(Math.random() * 30) + 20; // 20-50
+                    } else if (point.level === 'advanced') {
+                        baseValue = Math.floor(Math.random() * 15); // 0-15
+                    }
+                } else {
+                    // 初中起点：基础较少
+                    if (point.level === 'entry') {
+                        baseValue = Math.floor(Math.random() * 20) + 5; // 5-25
+                    }
+                }
+                game.knowledge[kp] = baseValue;
+            });
+            
+            COACHES.forEach(coach => {
+                game.coaches[coach.id] = { relation: coach.locked ? 0 : 10, locked: coach.locked || false };
+            });
+            
+            addLog('欢迎来到OI个人模拟器！', 'success');
+            addLog(`目标：冲击IOI金牌！晋级路线：CSP-S→NOIP→省选→NOI→CTSC→IOI`);
+        }
+
+        function randomAttr(base, range) {
+            return Math.min(100, Math.max(0, base + Math.floor(Math.random() * range) - Math.floor(range / 2)));
+        }
+
+        // ==================== UI更新 ====================
+        function updateUI() {
+            if (!game) return;
+            
+            document.getElementById('current-year').textContent = game.currentYear;
+            document.getElementById('current-month').textContent = game.currentMonth;
+            document.getElementById('current-week').textContent = game.currentWeek;
+            document.getElementById('remaining-time').textContent = `${game.totalYears - game.currentYear + 1}年`;
+            document.getElementById('display-name').textContent = game.playerName;
+            document.getElementById('player-level').textContent = getPlayerLevel();
+            
+            updateAttrDisplay('basic-attrs', [
+                { name: '思维', key: 'thinking', class: 'thinking' },
+                { name: '编程', key: 'coding', class: 'coding' },
+                { name: '心理', key: 'mental', class: 'mental' }
+            ]);
+            
+            updateAttrDisplay('skill-attrs', [
+                { name: '数据结构', key: 'ds', class: 'ds' },
+                { name: '图论', key: 'graph', class: 'graph' },
+                { name: '字符串', key: 'string', class: 'string' },
+                { name: '动态规划', key: 'dp', class: 'dp' },
+                { name: '数学', key: 'math', class: 'math' }
+            ]);
+            
+            document.getElementById('val-pressure').textContent = game.pressure;
+            document.getElementById('val-money').textContent = game.money;
+            document.getElementById('val-rp').textContent = game.rp;
+            document.getElementById('val-problems').textContent = game.problems;
+            document.getElementById('luogu-count').textContent = game.problems;
+            document.getElementById('pressure-status').textContent = game.pressure;
+            
+            updateCoachList();
+            updateCompetitionList();
+            updateAchievements();
+            updateLogs();
+            updateAllGrids();
+            updateCompetitionWarning();
+        }
+
+        function updateAttrDisplay(containerId, attrs) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            attrs.forEach(attr => {
+                const value = game[attr.key];
+                const displayValue = value >= 100 ? getGrade(value) : null;
+                const barWidth = Math.min(100, value);
+                const div = document.createElement('div');
+                div.className = 'attr-item';
+                div.innerHTML = `
+                    <span class="attr-name">${attr.name}</span>
+                    <div class="attr-bar"><div class="attr-bar-fill ${attr.class}" style="width: ${barWidth}%"></div></div>
+                    <span class="attr-value">${displayValue ? `<span class="grade-badge grade-${displayValue.grade}">${displayValue.grade}</span> ${value}` : value}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function getPlayerLevel() {
+            const total = game.thinking + game.coding + game.mental + game.ds + game.graph + game.string + game.dp + game.math;
+            if (total >= 650) return 'IOI选手 Lv.12';
+            if (total >= 580) return '国家队选手 Lv.11';
+            if (total >= 520) return '国集选手 Lv.10';
+            if (total >= 460) return '省队选手 Lv.9';
+            if (total >= 400) return 'NOI选手 Lv.8';
+            if (total >= 340) return '省一选手 Lv.7';
+            if (total >= 280) return '省二选手 Lv.6';
+            if (total >= 220) return '省三选手 Lv.5';
+            if (total >= 160) return '提高组选手 Lv.4';
+            if (total >= 100) return '普及组选手 Lv.3';
+            if (total >= 60) return '初学者 Lv.2';
+            return '入门者 Lv.1';
+        }
+
+        function updateCoachList() {
+            const container = document.getElementById('coach-list');
+            container.innerHTML = '';
+            COACHES.forEach(coach => {
+                const coachData = game.coaches[coach.id];
+                if (coachData.locked) return;
+                const relationLevel = getRelationLevel(coachData.relation);
+                const div = document.createElement('div');
+                div.className = 'coach-item';
+                div.innerHTML = `
+                    <div class="coach-header"><div><div class="coach-name">${coach.name}</div><div class="coach-specialty">${coach.specialtyName}</div></div><div class="coach-relation" style="background: ${relationLevel.color}">${relationLevel.name}</div></div>
+                    <div class="coach-bar"><div class="coach-bar-fill" style="width: ${coachData.relation}%"></div></div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function getRelationLevel(relation) {
+            if (relation >= 80) return { name: '挚友', color: '#f1c40f' };
+            if (relation >= 60) return { name: '亲近', color: '#00b894' };
+            if (relation >= 40) return { name: '信任', color: '#0984e3' };
+            if (relation >= 20) return { name: '熟悉', color: '#6c5ce7' };
+            return { name: '陌生', color: '#b2bec3' };
+        }
+
+        function updateCompetitionList() {
+            // 更新晋级路线
+            const roadContainer = document.getElementById('progress-road');
+            const compOrder = ['csp_s_primary', 'csp_s', 'noip', 'provincial', 'noi', 'ctsc', 'ioi'];
+            const shortNames = ['初赛', '复赛', 'NOIP', '省选', 'NOI', 'CTSC', 'IOI'];
+            
+            let roadHtml = '';
+            compOrder.forEach((key, i) => {
+                const result = game.competitionResults[key];
+                const passed = result && result.qualified;
+                const current = canEnterCompetition(key) && !(result && result.thisYear);
+                let className = passed ? 'passed' : current ? 'current' : '';
+                roadHtml += `<span class="progress-step ${className}">${shortNames[i]}</span>`;
+                if (i < compOrder.length - 1) roadHtml += '<span class="progress-arrow">→</span>';
+            });
+            roadContainer.innerHTML = roadHtml;
+            
+            // 更新比赛列表
+            const container = document.getElementById('competition-list');
+            container.innerHTML = '';
+            Object.entries(COMPETITIONS).forEach(([key, comp]) => {
+                const status = getCompetitionStatus(key, comp);
+                const div = document.createElement('div');
+                div.className = `competition-card ${status.canEnter && !status.done ? 'current' : ''} ${status.canEnter ? '' : 'locked'}`;
+                div.innerHTML = `
+                    <div class="competition-header"><div class="competition-name">${comp.name}</div><div class="competition-status">${status.text}</div></div>
+                    <div class="competition-info">${comp.description} | 满分${comp.totalScore}分 | ${comp.month}月</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function getCompetitionStatus(key, comp) {
+            const result = game.competitionResults[key];
+            const canEnter = canEnterCompetition(key);
+            const done = result && result.thisYear;
+            let text = '';
+            if (done) {
+                text = result.medal ? `${result.medal === 'gold' ? '金牌' : result.medal === 'silver' ? '银牌' : '铜牌'} ${result.score}分` : `${result.score}分`;
+            } else if (canEnter) {
+                text = '符合条件';
+            } else {
+                text = '未达条件';
+            }
+            return { canEnter, done, text };
+        }
+
+        function canEnterCompetition(compKey) {
+            const comp = COMPETITIONS[compKey];
+            if (comp.requireComp) {
+                const prevResult = game.competitionResults[comp.requireComp];
+                if (!prevResult || !prevResult.qualified) return false;
+            }
+            const avgAbility = (game.thinking + game.coding + game.mental) / 3;
+            if (avgAbility < comp.requireScore - 8) return false;
+            return true;
+        }
+
+        function checkCompetitionThisWeek() {
+            const comps = [];
+            Object.entries(COMPETITIONS).forEach(([key, comp]) => {
+                if (comp.month === game.currentMonth && comp.week === game.currentWeek) {
+                    const result = game.competitionResults[key];
+                    const done = result && result.thisYear;
+                    if (!done && canEnterCompetition(key)) comps.push(key);
+                }
+            });
+            return comps;
+        }
+
+        function updateCompetitionWarning() {
+            const warning = document.getElementById('competition-warning');
+            const warningText = document.getElementById('warning-text');
+            const comps = checkCompetitionThisWeek();
+            if (comps.length > 0) {
+                warningText.textContent = `即将参加：${comps.map(k => COMPETITIONS[k].name).join('、')}`;
+                warning.classList.remove('hidden');
+            } else {
+                warning.classList.add('hidden');
+            }
+        }
+
+        function updateAchievements() {
+            const container = document.getElementById('achievement-list');
+            container.innerHTML = '';
+            let unlocked = 0;
+            ACHIEVEMENTS.forEach(ach => {
+                const isUnlocked = game.achievements.includes(ach.id);
+                if (isUnlocked) unlocked++;
+                const div = document.createElement('div');
+                div.className = `achievement-item ${isUnlocked ? '' : 'locked'}`;
+                div.innerHTML = `<div class="achievement-icon">${ach.icon}</div><div class="achievement-info"><div class="achievement-name">${ach.name}</div><div class="achievement-desc">${ach.desc}</div></div>`;
+                container.appendChild(div);
+            });
+            document.getElementById('achievement-count').textContent = `${unlocked}/${ACHIEVEMENTS.length}`;
+        }
+
+        function updateLogs() {
+            const container = document.getElementById('log-list');
+            container.innerHTML = '';
+            game.logs.slice(-12).reverse().forEach(log => {
+                const div = document.createElement('div');
+                div.className = `log-item ${log.type || ''}`;
+                div.innerHTML = `<div class="log-time">${log.time}</div><div>${log.text}</div>`;
+                container.appendChild(div);
+            });
+        }
+
+        function addLog(text, type = '') {
+            const time = `第${game.currentYear}年${game.currentMonth}月第${game.currentWeek}周`;
+            game.logs.push({ time, text, type });
+        }
+
+        function updateAllGrids() {
+            document.getElementById('training-grid').innerHTML = `
+                ${createActionCard('数据结构', 'ds', '线段树、树链剖分等', 1)}
+                ${createActionCard('图论', 'graph', '最短路、网络流等', 1)}
+                ${createActionCard('字符串', 'string', 'KMP、SAM等', 1)}
+                ${createActionCard('动态规划', 'dp', '区间DP、状压DP等', 1)}
+                ${createActionCard('数学', 'math', '数论、组合数学等', 1)}
+                ${createActionCard('模拟赛', 'mock', '全面检验能力', 1)}
+            `;
+            
+            document.getElementById('luogu-grid').innerHTML = `
+                ${createActionCard('入门题库', 'luogu-easy', '简单题目练习', 1)}
+                ${createActionCard('普及题库', 'luogu-medium', '提升基础能力', 1)}
+                ${createActionCard('提高题库', 'luogu-hard', '挑战难题', 1)}
+                ${createActionCard('省选题库', 'luogu-challenge', '冲刺高水平', 1)}
+            `;
+            
+            document.getElementById('online-grid').innerHTML = ONLINE_CONTESTS.map((c, i) => `
+                <div class="action-card ${game.coding >= c.difficulty - 25 ? '' : 'disabled'}" onclick="${game.coding >= c.difficulty - 25 ? `enterOnlineContest(${i})` : ''}">
+                    <div class="action-card-title">${c.name}</div>
+                    <div class="action-card-desc">难度: ${c.difficulty}</div>
+                    <div class="action-card-cost"><span>⏱1周</span><span>📈+${c.reward}</span></div>
+                </div>
+            `).join('');
+            
+            document.getElementById('rest-grid').innerHTML = `
+                ${createActionCard('轻松休息', 'rest-light', '压力-20', 1)}
+                ${createActionCard('正常休息', 'rest-normal', '压力-40 心理+3', 2)}
+                ${createActionCard('度假放松', 'rest-vacation', '压力-80 心理+8', 4)}
+            `;
+            
+            updateCoachInteract();
+        }
+
+        function createActionCard(title, action, desc, weeks) {
+            return `<div class="action-card" onclick="doAction('${action}', ${weeks})"><div class="action-card-title">${title}</div><div class="action-card-desc">${desc}</div><div class="action-card-cost"><span>⏱${weeks}周</span><span>😤+10压力</span></div></div>`;
+        }
+
+        function updateCoachInteract() {
+            const container = document.getElementById('coach-interact-list');
+            container.innerHTML = '';
+            
+            COACHES.forEach(coach => {
+                const coachData = game.coaches[coach.id];
+                if (coachData.locked) return;
+                const relationLevel = getRelationLevel(coachData.relation);
+                const pref = COACH_PREFERENCES[coach.id];
+                const likeTypes = pref.like.map(t => {
+                    const typeNames = {drink:'饮品',food:'食品',item:'日用品',tech:'数码',book:'书籍',luxury:'高档品'};
+                    return typeNames[t];
+                }).join('、');
+                
+                const div = document.createElement('div');
+                div.className = 'coach-interact';
+                div.innerHTML = `
+                    <div class="coach-interact-header">
+                        <div><div class="coach-interact-name">${coach.name}</div><div style="font-size: 0.75rem; color: var(--text-light);">${coach.specialtyName} | ${coach.styleName}</div></div>
+                        <div class="coach-interact-level" style="background: ${relationLevel.color}">${relationLevel.name} (${coachData.relation})</div>
+                    </div>
+                    <div class="coach-bar" style="margin-bottom: 10px;"><div class="coach-bar-fill" style="width: ${coachData.relation}%"></div></div>
+                    <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 8px;">偏好: ${likeTypes}</div>
+                    <div class="coach-buttons">
+                        <button class="btn btn-small btn-primary" onclick="showGiftShop('${coach.id}')">🎁 送礼</button>
+                        <button class="btn btn-small btn-secondary" onclick="askCoach('${coach.id}')">💬 请教</button>
+                        <button class="btn btn-small btn-success" onclick="showTrainingOptions('${coach.id}')">📚 集训</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ==================== 时间推进 ====================
+        function advanceWeek() {
+            game.currentWeek++;
+            if (game.currentWeek > CONFIG.weeksPerMonth) {
+                game.currentWeek = 1;
+                game.currentMonth++;
+                
+                // 每月生活费
+                const monthlyAllowance = game.isSenior ? 300 : 200;
+                game.money += monthlyAllowance;
+                addLog(`收到父母给的${monthlyAllowance}元生活费`, 'success');
+                
+                // 教练关系自然衰减
+                COACHES.forEach(coach => {
+                    if (!game.coaches[coach.id].locked && game.coaches[coach.id].relation > 10) {
+                        game.coaches[coach.id].relation = Math.max(10, game.coaches[coach.id].relation - 2);
+                    }
+                });
+            }
+            if (game.currentMonth > CONFIG.monthsPerYear) {
+                game.currentMonth = 1;
+                game.currentYear++;
+                Object.keys(game.competitionResults).forEach(key => {
+                    if (game.competitionResults[key]) game.competitionResults[key].thisYear = false;
+                });
+                addLog(`进入第${game.currentYear}学年`, 'success');
+            }
+            if (game.currentYear > game.totalYears) { endGame(); return false; }
+            if (game.pressure > 0) game.pressure = Math.max(0, game.pressure - 2);
+            
+            const comps = checkCompetitionThisWeek();
+            if (comps.length > 0) game.competitionQueue = comps;
+            
+            triggerRandomEvent();
+            checkAchievements();
+            return true;
+        }
+
+        function triggerRandomEvent() {
+            EVENTS.positive.forEach(event => { if (Math.random() * 100 < event.chance) applyEvent(event); });
+            if (game.pressure > 35) {
+                EVENTS.negative.forEach(event => { if (Math.random() * 100 < event.chance * (game.pressure / 50)) applyEvent(event); });
+            }
+            EVENTS.special.forEach(event => { if (event.condition && event.condition(game) && Math.random() * 100 < event.chance) applyEvent(event); });
+        }
+
+        function applyEvent(event) {
+            addLog(`【事件】${event.name}：${event.desc}`, 'warning');
+            const e = event.effect;
+            if (e.thinking) game.thinking = Math.max(0, game.thinking + e.thinking);
+            if (e.coding) game.coding = Math.max(0, game.coding + e.coding);
+            if (e.mental) game.mental = Math.max(0, game.mental + e.mental);
+            if (e.pressure) game.pressure = Math.max(0, Math.min(100, game.pressure + e.pressure));
+            if (e.rp) game.rp = Math.min(100, Math.max(0, game.rp + e.rp));
+            if (e.money) game.money = Math.max(0, game.money + e.money);
+            if (e.problems) game.problems += e.problems;
+            ['ds', 'dp', 'graph', 'string', 'math'].forEach(k => { if (e[k]) game[k] = Math.max(0, game[k] + e[k]); });
+            if (e.allSkill) ['ds', 'dp', 'graph', 'string', 'math'].forEach(k => game[k] = Math.max(0, game[k] + e.allSkill));
+            if (e.unlockCoach) { game.coaches[e.unlockCoach].locked = false; addLog(`解锁了新教练！`, 'success'); }
+        }
+
+        // ==================== 统一动作处理 ====================
+        function doAction(action, weeks) {
+            const isRest = action.startsWith('rest-');
+            if (!isRest && game.pressure >= 88) {
+                showModal('压力过大', '你的压力太大了，需要休息一下！', [{ text: '确定', action: 'close' }]);
+                return;
+            }
+            
+            processAction(action);
+            if (!isRest) game.pressure = Math.min(100, game.pressure + 10);
+            game.trainWeeks++;
+            
+            for (let i = 0; i < weeks; i++) { if (!advanceWeek()) return; }
+            
+            if (game.competitionQueue.length > 0) { showPendingCompetition(); return; }
+            updateUI();
+        }
+
+        function processAction(action) {
+            // 辅助函数：提升知识点掌握度
+            const improveKnowledge = (category, amount) => {
+                Object.keys(KNOWLEDGE_POINTS).forEach(kpId => {
+                    const kp = KNOWLEDGE_POINTS[kpId];
+                    if (kp.category === category || category === 'all') {
+                        const gain = typeof amount === 'function' ? amount(kp) : amount;
+                        game.knowledge[kpId] = Math.min(100, (game.knowledge[kpId] || 0) + gain);
+                    }
+                });
+            };
+            
+            // 辅助函数：按级别提升知识点
+            const improveByLevel = (level, amount) => {
+                Object.keys(KNOWLEDGE_POINTS).forEach(kpId => {
+                    const kp = KNOWLEDGE_POINTS[kpId];
+                    if (kp.level === level) {
+                        const gain = typeof amount === 'function' ? amount(kp) : amount;
+                        game.knowledge[kpId] = Math.min(100, (game.knowledge[kpId] || 0) + gain);
+                    }
+                });
+            };
+            
+            switch(action) {
+                case 'ds': 
+                    game.ds = Math.max(0, game.ds + randomGain(4, 8));
+                    game.coding = Math.max(0, game.coding + randomGain(1, 3));
+                    game.problems += 5;
+                    improveKnowledge('ds', randomGain(3, 6));
+                    addLog(`进行数据结构专项训练`, 'success');
+                    break;
+                case 'graph': 
+                    game.graph = Math.max(0, game.graph + randomGain(4, 8));
+                    game.coding = Math.max(0, game.coding + randomGain(1, 3));
+                    game.problems += 5;
+                    improveKnowledge('graph', randomGain(3, 6));
+                    addLog(`进行图论专项训练`, 'success');
+                    break;
+                case 'string': 
+                    game.string = Math.max(0, game.string + randomGain(4, 8));
+                    game.coding = Math.max(0, game.coding + randomGain(1, 3));
+                    game.problems += 5;
+                    improveKnowledge('string', randomGain(3, 6));
+                    addLog(`进行字符串专项训练`, 'success');
+                    break;
+                case 'dp': 
+                    game.dp = Math.max(0, game.dp + randomGain(4, 8));
+                    game.coding = Math.max(0, game.coding + randomGain(1, 3));
+                    game.problems += 5;
+                    improveKnowledge('dp', randomGain(3, 6));
+                    addLog(`进行动态规划专项训练`, 'success');
+                    break;
+                case 'math': 
+                    game.math = Math.max(0, game.math + randomGain(4, 8));
+                    game.coding = Math.max(0, game.coding + randomGain(1, 3));
+                    game.problems += 5;
+                    improveKnowledge('math', randomGain(3, 6));
+                    addLog(`进行数学专项训练`, 'success');
+                    break;
+                case 'mock':
+                    game.thinking = Math.max(0, game.thinking + randomGain(2, 4));
+                    game.coding = Math.max(0, game.coding + randomGain(2, 4));
+                    game.mental = Math.max(0, game.mental + randomGain(1, 3));
+                    ['ds', 'dp', 'graph', 'string', 'math'].forEach(k => game[k] = Math.max(0, game[k] + randomGain(1, 3)));
+                    game.problems += 4;
+                    improveKnowledge('all', randomGain(1, 3));
+                    addLog(`参加模拟赛，能力全面提升`, 'success');
+                    break;
+                case 'luogu-easy':
+                    const easyCount = randomGain(5, 8);
+                    game.problems += easyCount;
+                    game.coding = Math.max(0, game.coding + randomGain(1, 2));
+                    improveByLevel('entry', randomGain(1, 2));
+                    addLog(`洛谷入门题库，完成${easyCount}题`, 'success');
+                    break;
+                case 'luogu-medium':
+                    const medCount = randomGain(3, 5);
+                    game.problems += medCount;
+                    game.thinking = Math.max(0, game.thinking + randomGain(2, 3));
+                    game.coding = Math.max(0, game.coding + randomGain(2, 3));
+                    game.ds = Math.max(0, game.ds + randomGain(1, 2));
+                    game.dp = Math.max(0, game.dp + randomGain(1, 2));
+                    improveByLevel('entry', randomGain(2, 4));
+                    improveByLevel('advanced', randomGain(1, 2));
+                    addLog(`洛谷普及题库，完成${medCount}题`, 'success');
+                    break;
+                case 'luogu-hard':
+                    const hardCount = randomGain(1, 3);
+                    game.problems += hardCount;
+                    game.thinking = Math.max(0, game.thinking + randomGain(3, 5));
+                    game.coding = Math.max(0, game.coding + randomGain(3, 5));
+                    ['ds', 'dp', 'graph'].forEach(k => game[k] = Math.max(0, game[k] + randomGain(2, 3)));
+                    improveByLevel('entry', randomGain(1, 2));
+                    improveByLevel('advanced', randomGain(3, 5));
+                    addLog(`洛谷提高题库，完成${hardCount}题`, 'success');
+                    break;
+                case 'luogu-challenge':
+                    const challengeCount = randomGain(1, 2);
+                    game.problems += challengeCount;
+                    game.thinking = Math.max(0, game.thinking + randomGain(4, 7));
+                    game.coding = Math.max(0, game.coding + randomGain(4, 7));
+                    ['ds', 'dp', 'graph', 'math', 'string'].forEach(k => game[k] = Math.max(0, game[k] + randomGain(2, 5)));
+                    improveByLevel('advanced', randomGain(2, 4));
+                    improveByLevel('noi', randomGain(1, 3));
+                    addLog(`洛谷省选题库，完成${challengeCount}题`, 'success');
+                    break;
+                case 'rest-light': game.pressure = Math.max(0, game.pressure - 20); addLog('轻松休息一周'); break;
+                case 'rest-normal': game.pressure = Math.max(0, game.pressure - 40); game.mental = Math.max(0, game.mental + 3); addLog('好好休息两周，状态恢复'); break;
+                case 'rest-vacation': game.pressure = Math.max(0, game.pressure - 80); game.mental = Math.max(0, game.mental + 8); game.money = Math.max(0, game.money - 200); addLog('度了个假，身心放松'); break;
+            }
+        }
+
+        function randomGain(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        // ==================== 集训系统 ====================
+        function showTrainingOptions(coachId) {
+            const coach = COACHES.find(c => c.id === coachId);
+            const coachData = game.coaches[coachId];
+            
+            let optionsHtml = TRAINING_TYPES.map((t, i) => {
+                const canAccess = coachData.relation >= t.requireRelation;
+                const canAfford = game.money >= t.cost;
+                const disabled = !canAccess || !canAfford;
+                
+                let effectText = '';
+                if (t.effect.thinking) effectText += `思维+${t.effect.thinking} `;
+                if (t.effect.coding) effectText += `编程+${t.effect.coding} `;
+                if (t.effect.mental) effectText += `心理+${t.effect.mental} `;
+                if (t.effect.specialty) effectText += `专长+${t.effect.specialty} `;
+                if (t.effect.allSkill) effectText += `全知识点+${t.effect.allSkill} `;
+                
+                return `
+                    <div class="training-option ${disabled ? 'disabled' : ''}" onclick="${disabled ? '' : `selectTraining('${coachId}', ${i})`}">
+                        <div class="training-option-header">
+                            <div class="training-option-name">${t.name}</div>
+                            <div class="training-option-cost">${t.cost > 0 ? `💰${t.cost}` : '免费'}</div>
+                        </div>
+                        <div class="training-option-desc">${t.desc}</div>
+                        <div class="training-option-effect">${effectText}| ⏱${t.weeks}周</div>
+                        ${!canAccess ? `<div style="color: var(--danger); font-size: 0.8rem; margin-top: 5px;">需要关系: ${t.requireRelation}</div>` : ''}
+                        ${canAccess && !canAfford ? `<div style="color: var(--danger); font-size: 0.8rem; margin-top: 5px;">金钱不足</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            showModal(`${coach.name}的集训项目`, `
+                <p style="margin-bottom: 15px; color: var(--text-light);">选择适合你的集训方式（当前关系: ${coachData.relation}，金钱: ${game.money}）</p>
+                ${optionsHtml}
+            `, [{ text: '取消', action: 'close' }]);
+        }
+
+        function selectTraining(coachId, trainingIndex) {
+            const coach = COACHES.find(c => c.id === coachId);
+            const coachData = game.coaches[coachId];
+            const training = TRAINING_TYPES[trainingIndex];
+            
+            if (coachData.relation < training.requireRelation || game.money < training.cost) return;
+            
+            game.money -= training.cost;
+            
+            if (training.effect.thinking) game.thinking = Math.max(0, game.thinking + training.effect.thinking);
+            if (training.effect.coding) game.coding = Math.max(0, game.coding + training.effect.coding);
+            if (training.effect.mental) game.mental = Math.max(0, game.mental + training.effect.mental);
+            
+            if (training.effect.specialty) {
+                const specialty = coach.specialty[Math.floor(Math.random() * coach.specialty.length)];
+                game[specialty] = Math.max(0, game[specialty] + training.effect.specialty);
+            }
+            
+            if (training.effect.allSkill) {
+                ['ds', 'dp', 'graph', 'string', 'math'].forEach(k => game[k] = Math.max(0, game[k] + training.effect.allSkill));
+            }
+            
+            game.pressure = Math.min(100, game.pressure + 15);
+            coachData.relation = Math.min(100, coachData.relation + 5);
+            
+            closeModal();
+            
+            for (let i = 0; i < training.weeks; i++) {
+                if (!advanceWeek()) return;
+            }
+            
+            addLog(`完成${coach.name}的「${training.name}」集训`, 'success');
+            
+            if (game.competitionQueue.length > 0) showPendingCompetition();
+            else updateUI();
+        }
+
+        // ==================== 礼物系统 ====================
+        function showGiftShop(coachId) {
+            const coach = COACHES.find(c => c.id === coachId);
+            const coachData = game.coaches[coachId];
+            const pref = COACH_PREFERENCES[coachId];
+            
+            const categories = {
+                drink: '饮品',
+                food: '食品',
+                item: '日用品',
+                tech: '数码',
+                book: '书籍',
+                luxury: '高档品'
+            };
+            
+            let giftsHtml = '';
+            Object.entries(categories).forEach(([cat, catName]) => {
+                const catGifts = Object.entries(GIFTS).filter(([k, g]) => g.category === cat);
+                if (catGifts.length === 0) return;
+                
+                const isLiked = pref.like.includes(cat);
+                const isDisliked = pref.dislike.includes(cat);
+                
+                giftsHtml += `<div style="margin-bottom: 15px;"><div style="font-weight: 600; margin-bottom: 8px; color: var(--primary);">${catName} ${isLiked ? '❤️喜爱' : isDisliked ? '💔不喜' : ''}</div><div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">`;
+                
+                catGifts.forEach(([giftId, gift]) => {
+                    const canAfford = game.money >= gift.price;
+                    let effectBonus = 1;
+                    if (isLiked) effectBonus = pref.bonus;
+                    else if (isDisliked) effectBonus = 0.5;
+                    
+                    const actualEffect = Math.round(gift.baseEffect * effectBonus);
+                    
+                    giftsHtml += `
+                        <div class="gift-item ${canAfford ? '' : 'disabled'}" onclick="${canAfford ? `sendGift('${coachId}', '${giftId}')` : ''}" style="background: var(--bg); padding: 10px; border-radius: 8px; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; border: 2px solid ${isLiked ? 'var(--success)' : isDisliked ? 'var(--danger)' : 'transparent'};">
+                            <div style="font-weight: 600; font-size: 0.9rem;">${gift.icon} ${gift.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-light);">${gift.desc}</div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.8rem;">
+                                <span style="color: var(--warning);">💰${gift.price}</span>
+                                <span style="color: var(--success);">+${actualEffect}好感</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                giftsHtml += '</div></div>';
+            });
+            
+            showModal(`🎁 送礼给 ${coach.name}`, `
+                <div style="margin-bottom: 15px; padding: 10px; background: linear-gradient(135deg, #667eea20, #764ba220); border-radius: 10px;">
+                    <p><strong>当前关系：</strong>${coachData.relation}/100</p>
+                    <p><strong>你的金钱：</strong>💰${game.money}</p>
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;">提示：送教练喜欢的礼物会有额外加成！</p>
+                </div>
+                ${giftsHtml}
+            `, [{ text: '取消', action: 'close' }]);
+        }
+
+        function sendGift(coachId, giftId) {
+            const coach = COACHES.find(c => c.id === coachId);
+            const coachData = game.coaches[coachId];
+            const gift = GIFTS[giftId];
+            const pref = COACH_PREFERENCES[coachId];
+            
+            if (game.money < gift.price) {
+                showModal('金钱不足', '<p>你没有足够的金钱购买这个礼物！</p>', [{ text: '确定', action: 'close' }]);
+                return;
+            }
+            
+            game.money -= gift.price;
+            
+            let effectBonus = 1;
+            let reaction = '';
+            
+            if (pref.like.includes(gift.category)) {
+                effectBonus = pref.bonus;
+                reaction = `<p style="color: var(--success); margin-top: 15px;"><strong>${coach.name}非常喜欢！</strong></p>`;
+            } else if (pref.dislike.includes(gift.category)) {
+                effectBonus = 0.5;
+                reaction = `<p style="color: var(--danger); margin-top: 15px;"><strong>${coach.name}不太感冒...</strong></p>`;
+            } else {
+                reaction = `<p style="color: var(--text-light); margin-top: 15px;"><strong>${coach.name}礼貌地收下了</strong></p>`;
+            }
+            
+            const actualEffect = Math.round(gift.baseEffect * effectBonus);
+            coachData.relation = Math.min(100, coachData.relation + actualEffect);
+            
+            // 增加送礼计数
+            game.giftCount++;
+            
+            // 送礼可能触发额外奖励
+            let extraReward = '';
+            if (pref.like.includes(gift.category) && Math.random() < 0.3) {
+                const bonus = Math.floor(Math.random() * 3) + 1;
+                const specialty = coach.specialty[Math.floor(Math.random() * coach.specialty.length)];
+                game[specialty] = Math.max(0, game[specialty] + bonus);
+                extraReward = `<p style="color: var(--primary);">教练额外指点，${specialty.toUpperCase()}+${bonus}！</p>`;
+            }
+            
+            closeModal();
+            
+            showModal('🎁 送礼成功', `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">${gift.icon}</div>
+                    <p style="font-size: 1.1rem;">送出了 <strong>${gift.name}</strong></p>
+                    ${reaction}
+                    <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-top: 15px;">
+                        <p>好感度 +${actualEffect}</p>
+                        ${extraReward}
+                    </div>
+                </div>
+            `, [{ text: '太棒了', action: 'close' }]);
+            
+            addLog(`送给${coach.name}一份${gift.name}，好感度+${actualEffect}`, 'success');
+            updateUI();
+        }
+
+        // ==================== 请教系统 ====================
+        function askCoach(coachId) {
+            const coach = COACHES.find(c => c.id === coachId);
+            const coachData = game.coaches[coachId];
+            
+            if (coachData.relation < 20) {
+                showModal('关系不够', `<p>与${coach.name}的关系还不够熟悉，需要达到20才能请教问题。</p>`, [{ text: '确定', action: 'close' }]);
+                return;
+            }
+            
+            // 请教花费时间
+            const questions = [
+                { topic: '算法思路', effect: { thinking: 3 }, desc: '讨论算法设计思路' },
+                { topic: '代码优化', effect: { coding: 3 }, desc: '学习代码优化技巧' },
+                { topic: '比赛心态', effect: { mental: 3, pressure: -5 }, desc: '调整比赛心态' },
+                { topic: '专业知识', effect: { specialty: 4 }, desc: '深入学习专业领域' },
+                { topic: '职业规划', effect: { mental: 2, rp: 3 }, desc: '讨论未来发展方向' }
+            ];
+            
+            const specialtyTopics = coach.specialty.map(s => {
+                const names = { ds: '数据结构', graph: '图论', string: '字符串', dp: '动态规划', math: '数学' };
+                return { topic: `${names[s]}专题`, effect: { [s]: 5 }, desc: `专攻${names[s]}知识`, isSpecialty: true };
+            });
+            
+            const allQuestions = [...questions, ...specialtyTopics];
+            
+            let questionsHtml = allQuestions.map((q, i) => `
+                <div class="training-option" onclick="selectQuestion('${coachId}', ${i})" style="${q.isSpecialty ? 'border-color: var(--success);' : ''}">
+                    <div class="training-option-header">
+                        <div class="training-option-name">${q.topic} ${q.isSpecialty ? '⭐专长' : ''}</div>
+                        <div class="training-option-cost">⏱1周</div>
+                    </div>
+                    <div class="training-option-desc">${q.desc}</div>
+                    <div class="training-option-effect">${Object.entries(q.effect).map(([k, v]) => `${k}+${v}`).join(' ')}</div>
+                </div>
+            `).join('');
+            
+            showModal(`💬 向${coach.name}请教`, `
+                <p style="margin-bottom: 15px; color: var(--text-light);">选择你想请教的方向（需要关系≥20，消耗1周时间）</p>
+                <p style="margin-bottom: 10px;">当前关系：${coachData.relation} | 标注⭐的是教练专长</p>
+                ${questionsHtml}
+            `, [{ text: '取消', action: 'close' }]);
+        }
+
+        function selectQuestion(coachId, questionIndex) {
+            const coach = COACHES.find(c => c.id === coachId);
+            const coachData = game.coaches[coachId];
+            
+            const questions = [
+                { topic: '算法思路', effect: { thinking: 3 }, desc: '讨论算法设计思路' },
+                { topic: '代码优化', effect: { coding: 3 }, desc: '学习代码优化技巧' },
+                { topic: '比赛心态', effect: { mental: 3, pressure: -5 }, desc: '调整比赛心态' },
+                { topic: '专业知识', effect: { specialty: 4 }, desc: '深入学习专业领域' },
+                { topic: '职业规划', effect: { mental: 2, rp: 3 }, desc: '讨论未来发展方向' }
+            ];
+            
+            const specialtyTopics = coach.specialty.map(s => {
+                const names = { ds: '数据结构', graph: '图论', string: '字符串', dp: '动态规划', math: '数学' };
+                return { topic: `${names[s]}专题`, effect: { [s]: 5 }, desc: `专攻${names[s]}知识`, isSpecialty: true };
+            });
+            
+            const allQuestions = [...questions, ...specialtyTopics];
+            const question = allQuestions[questionIndex];
+            
+            // 应用效果
+            Object.entries(question.effect).forEach(([key, value]) => {
+                if (key === 'specialty') {
+                    const s = coach.specialty[Math.floor(Math.random() * coach.specialty.length)];
+                    game[s] = Math.max(0, game[s] + value);
+                } else if (key === 'pressure') {
+                    game.pressure = Math.max(0, game.pressure + value);
+                } else if (['rp'].includes(key)) {
+                    game[key] = Math.min(100, Math.max(0, game[key] + value));
+                } else if (['ds', 'graph', 'string', 'dp', 'math'].includes(key)) {
+                    game[key] = Math.max(0, game[key] + value);
+                } else {
+                    game[key] = Math.max(0, game[key] + value);
+                }
+            });
+            
+            // 少量好感度增加
+            coachData.relation = Math.min(100, coachData.relation + 2);
+            
+            closeModal();
+            addLog(`向${coach.name}请教${question.topic}`, 'success');
+            
+            advanceWeek();
+            
+            if (game.competitionQueue.length > 0) showPendingCompetition();
+            else updateUI();
+        }
+
+        // ==================== 比赛系统 ====================
+        function showPendingCompetition() {
+            const compKey = game.competitionQueue[0];
+            const comp = COMPETITIONS[compKey];
+            
+            showModal(`🏆 强制参赛：${comp.name}`, `
+                <div style="text-align: center;">
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;">本周是${comp.name}的比赛时间！</p>
+                    <p style="color: var(--text-light); margin-bottom: 10px;">${comp.description} | 满分${comp.totalScore}分 | ${comp.problemCount}道题</p>
+                    <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+                        <p><strong>当前能力：</strong>思维 ${game.thinking} | 编程 ${game.coding} | 心理 ${game.mental}</p>
+                        <p style="margin-top: 5px;">压力 ${game.pressure} | RP ${game.rp}</p>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <label style="font-size: 0.85rem; color: var(--text-light);">选择比赛策略：</label>
+                        <select id="competition-strategy" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 8px; border: 2px solid var(--light);">
+                            <option value="balanced">稳健策略 - 按顺序做题</option>
+                            <option value="aggressive">冲刺策略 - 先做难题</option>
+                            <option value="conservative">保底策略 - 确保简单题</option>
+                        </select>
+                    </div>
+                </div>
+            `, [{ text: '开始比赛', action: `executePendingCompetition('${compKey}')`, primary: true }]);
+        }
+
+        function executePendingCompetition(compKey) {
+            game.competitionQueue.shift();
+            const comp = COMPETITIONS[compKey];
+            const strategy = document.getElementById('competition-strategy').value;
+            
+            const problemScores = calculateProblemScores(comp, strategy);
+            const totalScore = problemScores.reduce((sum, p) => sum + p.score, 0);
+            
+            const participants = comp.baseParticipants + Math.floor(Math.random() * Math.floor(comp.baseParticipants * 0.3));
+            const rank = Math.max(1, Math.round(participants * (1 - totalScore / comp.totalScore)));
+            
+            const result = {
+                score: totalScore,
+                rank: rank,
+                total: participants,
+                medal: null,
+                qualified: false,
+                thisYear: true,
+                problemScores: problemScores,
+                isAK: totalScore >= comp.totalScore
+            };
+            
+            const rankPercent = rank / participants;
+            determineMedal(compKey, result, rankPercent, rank);
+            
+            game.competitionResults[compKey] = result;
+            game.competitionsEntered++;
+            
+            if (!game.bestCompetition || COMPETITIONS[compKey].level > COMPETITIONS[game.bestCompetition].level) {
+                game.bestCompetition = compKey;
+            }
+            
+            COACHES.forEach(coach => {
+                if (!game.coaches[coach.id].locked && result.medal) {
+                    game.coaches[coach.id].relation = Math.min(100, game.coaches[coach.id].relation + 8);
+                }
+            });
+            
+            game.pressure = Math.min(100, game.pressure + 20);
+            
+            if (result.isAK && !game.hasAK) {
+                game.hasAK = true;
+                if (!game.achievements.includes('ak')) game.achievements.push('ak');
+            }
+            
+            closeModal();
+            showCompetitionResult(comp, result, compKey);
+            addLog(`参加${comp.name}，获得${result.score}分，${result.medal ? result.medal + '牌' : '第' + result.rank + '名'}`, result.medal ? 'success' : 'warning');
+            
+            if (game.competitionQueue.length > 0) setTimeout(() => showPendingCompetition(), 500);
+            else updateUI();
+        }
+
+        function calculateProblemScores(comp, strategy) {
+            const luck = (game.rp - 50) / 100;
+            
+            let problems = [...comp.problems];
+            
+            if (strategy === 'aggressive') problems.sort((a, b) => b.difficulty - a.difficulty);
+            else if (strategy === 'conservative') problems.sort((a, b) => a.difficulty - b.difficulty);
+            
+            return problems.map((prob, index) => {
+                // 基于知识点的分数计算
+                const kpScores = prob.knowledgePoints.map(kpId => {
+                    const kp = KNOWLEDGE_POINTS[kpId];
+                    if (!kp) return 50; // 未知知识点默认50%
+                    
+                    const mastery = game.knowledge[kpId] || 0; // 掌握度 0-100
+                    const kpDifficulty = kp.difficulty; // 难度系数 1-10
+                    
+                    // 掌握度与难度的关系
+                    // 掌握度需要达到 难度*10 才能基本应对
+                    const requiredMastery = kpDifficulty * 10;
+                    const masteryRatio = mastery / requiredMastery;
+                    
+                    return { mastery, difficulty: kpDifficulty, masteryRatio, kpName: kp.name };
+                });
+                
+                // 综合评估：取最低的掌握比例作为基础能力
+                const minMasteryRatio = Math.min(...kpScores.map(k => k.masteryRatio));
+                const avgMasteryRatio = kpScores.reduce((sum, k) => sum + k.masteryRatio, 0) / kpScores.length;
+                
+                // 综合能力指数 (偏向短板)
+                const abilityIndex = minMasteryRatio * 0.6 + avgMasteryRatio * 0.4;
+                
+                // 计算得分
+                let score = 0;
+                const rand = Math.random();
+                const luckBonus = luck * 0.05; // RP影响
+                
+                // 根据综合能力指数决定得分
+                if (abilityIndex >= 1.5) {
+                    // 远超要求，几乎必定满分
+                    if (rand < 0.95 + luckBonus) {
+                        score = prob.fullScore;
+                    } else {
+                        score = Math.floor(prob.fullScore * (0.85 + Math.random() * 0.15));
+                    }
+                } else if (abilityIndex >= 1.0) {
+                    // 满足要求，较高概率满分
+                    if (rand < 0.80 + luckBonus) {
+                        score = prob.fullScore;
+                    } else if (rand < 0.95) {
+                        score = Math.floor(prob.fullScore * (0.6 + Math.random() * 0.35));
+                    } else {
+                        score = Math.floor(prob.fullScore * (0.3 + Math.random() * 0.2));
+                    }
+                } else if (abilityIndex >= 0.7) {
+                    // 接近要求，有挑战
+                    if (rand < 0.50 + luckBonus) {
+                        score = prob.fullScore;
+                    } else if (rand < 0.80) {
+                        score = Math.floor(prob.fullScore * (0.4 + Math.random() * 0.4));
+                    } else if (rand < 0.95) {
+                        score = Math.floor(prob.fullScore * (0.1 + Math.random() * 0.25));
+                    } else {
+                        score = Math.floor(prob.fullScore * Math.random() * 0.1);
+                    }
+                } else if (abilityIndex >= 0.4) {
+                    // 较难
+                    if (rand < 0.25 + luckBonus) {
+                        score = prob.fullScore;
+                    } else if (rand < 0.55) {
+                        score = Math.floor(prob.fullScore * (0.2 + Math.random() * 0.4));
+                    } else if (rand < 0.85) {
+                        score = Math.floor(prob.fullScore * Math.random() * 0.2);
+                    } else {
+                        score = 0;
+                    }
+                } else {
+                    // 非常困难
+                    if (rand < 0.08 + luckBonus * 2) {
+                        score = prob.fullScore; // 小概率爆发
+                    } else if (rand < 0.30) {
+                        score = Math.floor(prob.fullScore * (0.1 + Math.random() * 0.2));
+                    } else if (rand < 0.60) {
+                        score = Math.floor(prob.fullScore * Math.random() * 0.1);
+                    } else {
+                        score = 0;
+                    }
+                }
+                
+                // 策略影响
+                if (strategy === 'aggressive' && index > 0) {
+                    score = Math.floor(score * 0.85);
+                }
+                
+                // 压力影响
+                if (game.pressure > 60) {
+                    const pressurePenalty = (game.pressure - 60) / 200;
+                    if (Math.random() < pressurePenalty) {
+                        score = Math.floor(score * (0.85 + Math.random() * 0.1));
+                    }
+                }
+                
+                // 心理素质加成
+                const mentalBonus = game.mental / 500; // 0-0.2+
+                if (Math.random() < mentalBonus && score < prob.fullScore) {
+                    score = Math.min(prob.fullScore, score + Math.floor(prob.fullScore * 0.1));
+                }
+                
+                return { 
+                    ...prob, 
+                    score: Math.max(0, Math.min(prob.fullScore, score)),
+                    abilityIndex: abilityIndex.toFixed(2),
+                    knowledgeDetails: kpScores
+                };
+            });
+        }
+
+        function determineMedal(compKey, result, rankPercent, rank) {
+            // 奖金映射
+            const prizeMoney = { gold: 0, silver: 0, bronze: 0 };
+            
+            if (compKey === 'csp_s') {
+                prizeMoney.gold = 500; prizeMoney.silver = 200; prizeMoney.bronze = 100;
+                if (rankPercent <= 0.08) { result.medal = 'gold'; result.qualified = true; game.medals.gold++; }
+                else if (rankPercent <= 0.20) { result.medal = 'silver'; result.qualified = true; game.medals.silver++; }
+                else if (rankPercent <= 0.45) { result.medal = 'bronze'; result.qualified = true; game.medals.bronze++; }
+                else if (rankPercent <= 0.60) { result.qualified = true; }
+            } else if (compKey === 'csp_s_primary') {
+                result.qualified = result.score >= 55;
+            } else if (compKey === 'noip') {
+                prizeMoney.gold = 1000; prizeMoney.silver = 500; prizeMoney.bronze = 200;
+                if (rankPercent <= 0.04) { result.medal = 'gold'; result.qualified = true; game.medals.gold++; }
+                else if (rankPercent <= 0.12) { result.medal = 'silver'; result.qualified = true; game.medals.silver++; }
+                else if (rankPercent <= 0.25) { result.medal = 'bronze'; result.qualified = true; game.medals.bronze++; }
+                else if (rankPercent <= 0.45) { result.qualified = true; }
+            } else if (compKey === 'provincial') {
+                prizeMoney.gold = 2000; prizeMoney.silver = 1000; prizeMoney.bronze = 500;
+                if (rank <= 12 || rankPercent <= 0.06) { result.medal = 'gold'; result.qualified = true; game.medals.gold++; }
+                else if (rankPercent <= 0.18) { result.medal = 'silver'; result.qualified = true; game.medals.silver++; }
+                else if (rankPercent <= 0.35) { result.medal = 'bronze'; game.medals.bronze++; }
+            } else if (compKey === 'noi') {
+                prizeMoney.gold = 5000; prizeMoney.silver = 3000; prizeMoney.bronze = 1500;
+                if (rank <= 50) { result.medal = 'gold'; result.qualified = true; game.medals.gold++; }
+                else if (rank <= 150) { result.medal = 'silver'; result.qualified = true; game.medals.silver++; }
+                else if (rank <= 280) { result.medal = 'bronze'; result.qualified = true; game.medals.bronze++; }
+            } else if (compKey === 'ctsc') {
+                prizeMoney.gold = 10000; prizeMoney.silver = 5000; prizeMoney.bronze = 3000;
+                if (rank <= 4) { result.medal = 'gold'; result.qualified = true; game.medals.gold++; }
+                else if (rank <= 15) { result.medal = 'silver'; result.qualified = true; game.medals.silver++; }
+                else if (rank <= 30) { result.medal = 'bronze'; game.medals.bronze++; }
+            } else if (compKey === 'ioi') {
+                prizeMoney.gold = 50000; prizeMoney.silver = 20000; prizeMoney.bronze = 10000;
+                if (rankPercent <= 0.10) { result.medal = 'gold'; result.qualified = true; game.medals.gold++; }
+                else if (rankPercent <= 0.30) { result.medal = 'silver'; result.qualified = true; game.medals.silver++; }
+                else if (rankPercent <= 0.60) { result.medal = 'bronze'; result.qualified = true; game.medals.bronze++; }
+            }
+            
+            // 发放奖金
+            if (result.medal) {
+                const money = prizeMoney[result.medal] || 0;
+                if (money > 0) {
+                    game.money += money;
+                    result.prize = money;
+                }
+            }
+        }
+
+        function showCompetitionResult(comp, result, compKey) {
+            const medalText = result.medal ? `<span class="medal ${result.medal}">${result.medal === 'gold' ? '金牌' : result.medal === 'silver' ? '银牌' : '铜牌'}</span>` : '';
+            const prizeText = result.prize ? `<p style="color: var(--success); margin-top: 5px;">💰 获得奖金 ${result.prize} 元</p>` : '';
+            
+            // 详细题目表格，显示知识点
+            let problemTableHtml = `<table class="problem-table"><tr><th>题目</th><th>类型</th><th>难度</th><th>知识点</th><th>掌握度</th><th>满分</th><th>得分</th></tr>`;
+            result.problemScores.forEach(p => {
+                const scoreClass = p.score >= p.fullScore ? 'full-score' : p.score > 0 ? 'partial-score' : 'zero-score';
+                const kpNames = p.knowledgePoints ? p.knowledgePoints.map(kpId => {
+                    const kp = KNOWLEDGE_POINTS[kpId];
+                    return kp ? kp.name : kpId;
+                }).join(', ') : '-';
+                
+                // 计算知识点掌握度显示
+                let masteryDisplay = '-';
+                if (p.knowledgeDetails && p.knowledgeDetails.length > 0) {
+                    const avgMastery = Math.round(p.knowledgeDetails.reduce((sum, k) => sum + k.mastery, 0) / p.knowledgeDetails.length);
+                    masteryDisplay = `${avgMastery}%`;
+                }
+                
+                problemTableHtml += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.type}</td>
+                    <td>${p.difficulty}</td>
+                    <td style="font-size: 0.8rem; max-width: 120px;">${kpNames}</td>
+                    <td style="color: ${avgMastery >= 80 ? 'var(--success)' : avgMastery >= 50 ? 'var(--warning)' : 'var(--danger)'};">${masteryDisplay}</td>
+                    <td>${p.fullScore}</td>
+                    <td class="${scoreClass}">${p.score}</td>
+                </tr>`;
+            });
+            problemTableHtml += `<tr style="font-weight: bold;"><td colspan="5">总分</td><td>${comp.totalScore}</td><td style="color: var(--primary);">${result.score}</td></tr></table>`;
+            
+            // 能力指数说明
+            let abilityInfo = '';
+            if (result.problemScores.some(p => p.abilityIndex)) {
+                abilityInfo = `<div style="background: var(--bg); padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 0.85rem;">
+                    <p><strong>能力指数说明：</strong>数值越高表示对题目所需知识点的掌握程度越好</p>
+                    <p style="color: var(--text-light);">≥1.5 = 碾压 | ≥1.0 = 满足要求 | ≥0.7 = 有挑战 | <0.7 = 较困难</p>
+                </div>`;
+            }
+            
+            showModal(`${comp.name}结果`, `
+                <div class="result-panel">
+                    <div class="result-score">${result.score}/${comp.totalScore}${result.isAK ? ' AK!' : ''}</div>
+                    <div class="result-rank">第 ${result.rank} 名 / ${result.total} 人 ${medalText}</div>
+                    ${prizeText}
+                </div>
+                ${problemTableHtml}
+                ${abilityInfo}
+                <div class="result-detail">
+                    <div class="result-row"><span>是否晋级</span><span style="color: ${result.qualified ? 'var(--success)' : 'var(--danger)'}">${result.qualified ? '✓ 已晋级' : '✗ 未晋级'}</span></div>
+                </div>
+            `, [{ text: '确定', action: 'close' }]);
+        }
+
+        // ==================== 网上赛事 ====================
+        function enterOnlineContest(index) {
+            const contest = ONLINE_CONTESTS[index];
+            const performance = (game.thinking + game.coding) / 2 / contest.difficulty;
+            const rank = Math.max(1, Math.round(500 * (1 - performance * 0.8 + Math.random() * 0.2)));
+            const bonus = Math.round(contest.reward * (1 + performance));
+            
+            game.thinking = Math.max(0, game.thinking + bonus);
+            game.coding = Math.max(0, game.coding + bonus);
+            game.problems += Math.round(contest.reward * 2);
+            game.pressure = Math.min(100, game.pressure + 5);
+            
+            showModal(contest.name, `<div class="result-panel"><div class="result-score">Rank #${rank}</div><p style="margin-top: 15px;">能力提升 +${bonus}</p><p>题目完成 +${Math.round(contest.reward * 2)}</p></div>`, [{ text: '确定', action: 'close' }]);
+            
+            addLog(`参加${contest.name}，获得Rank #${rank}`, 'success');
+            advanceWeek();
+            
+            if (game.competitionQueue.length > 0) showPendingCompetition();
+            else updateUI();
+        }
+
+        // ==================== 成就系统 ====================
+        function checkAchievements() {
+            if (game.problems >= 1 && !game.achievements.includes('first_problem')) unlockAchievement('first_problem');
+            if (game.problems >= 100 && !game.achievements.includes('problem_100')) unlockAchievement('problem_100');
+            if (game.problems >= 500 && !game.achievements.includes('problem_500')) unlockAchievement('problem_500');
+            if (game.problems >= 1000 && !game.achievements.includes('problem_1000')) unlockAchievement('problem_1000');
+            if (game.competitionResults.csp_s?.medal === 'gold' && !game.achievements.includes('csp_s_gold')) unlockAchievement('csp_s_gold');
+            if (game.competitionResults.noip?.medal === 'gold' && !game.achievements.includes('noip_gold')) unlockAchievement('noip_gold');
+            if (game.competitionResults.provincial?.medal === 'gold' && !game.achievements.includes('provincial_gold')) unlockAchievement('provincial_gold');
+            if (game.competitionResults.provincial?.qualified && !game.achievements.includes('provincial_team')) unlockAchievement('provincial_team');
+            if (game.competitionResults.noi?.medal === 'bronze' && !game.achievements.includes('noi_bronze')) unlockAchievement('noi_bronze');
+            if (game.competitionResults.noi?.medal === 'silver' && !game.achievements.includes('noi_silver')) unlockAchievement('noi_silver');
+            if (game.competitionResults.noi?.medal === 'gold' && !game.achievements.includes('noi_gold')) unlockAchievement('noi_gold');
+            if (game.competitionResults.ctsc?.qualified && !game.achievements.includes('national_team')) unlockAchievement('national_team');
+            if (game.competitionResults.ctsc && !game.achievements.includes('ctsc_qualified')) unlockAchievement('ctsc_qualified');
+            if (game.competitionResults.ioi?.medal && !game.achievements.includes('ioi_medal')) unlockAchievement('ioi_medal');
+            if (game.competitionResults.ioi?.medal === 'gold' && !game.achievements.includes('ioi_gold')) unlockAchievement('ioi_gold');
+            const allMaxed = COACHES.every(c => game.coaches[c.id].locked || game.coaches[c.id].relation >= 80);
+            if (allMaxed && !game.achievements.includes('coach_master')) unlockAchievement('coach_master');
+            // 新增成就检测
+            if (game.giftCount >= 20 && !game.achievements.includes('gift_master')) unlockAchievement('gift_master');
+            if (COACHES.some(c => !game.coaches[c.id].locked && game.coaches[c.id].relation >= 80) && !game.achievements.includes('coach_friend')) unlockAchievement('coach_friend');
+            if (game.rp >= 95 && !game.achievements.includes('lucky')) unlockAchievement('lucky');
+            if (game.money >= 10000 && !game.achievements.includes('rich')) unlockAchievement('rich');
+            if (game.trainWeeks >= 100 && !game.achievements.includes('hardworker')) unlockAchievement('hardworker');
+        }
+
+        function unlockAchievement(id) {
+            game.achievements.push(id);
+            const ach = ACHIEVEMENTS.find(a => a.id === id);
+            addLog(`🏆 解锁成就：${ach.name}`, 'success');
+        }
+
+        // ==================== 结局系统 ====================
+        function endGame() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            
+            const scores = calculateEndScore();
+            document.getElementById('rating-score').textContent = scores.total;
+            document.getElementById('rating-rank').textContent = scores.rank;
+            document.getElementById('rating-competition').textContent = scores.competition;
+            document.getElementById('rating-growth').textContent = scores.growth;
+            document.getElementById('rating-problems').textContent = scores.problems;
+            document.getElementById('rating-social').textContent = scores.social;
+            document.getElementById('stat-problems').textContent = game.problems;
+            document.getElementById('stat-competitions').textContent = game.competitionsEntered;
+            document.getElementById('stat-medals').textContent = game.medals.gold + game.medals.silver + game.medals.bronze;
+            document.getElementById('end-title').textContent = scores.endingTitle;
+            document.getElementById('end-subtitle').textContent = scores.endingDesc;
+            
+            const achContainer = document.getElementById('end-achievements');
+            achContainer.innerHTML = '';
+            game.achievements.forEach(id => {
+                const ach = ACHIEVEMENTS.find(a => a.id === id);
+                if (ach) {
+                    const badge = document.createElement('div');
+                    badge.className = 'achievement-badge';
+                    badge.innerHTML = `${ach.icon} ${ach.name}`;
+                    achContainer.appendChild(badge);
+                }
+            });
+            if (game.achievements.length === 0) achContainer.innerHTML = '<p style="color: var(--text-light);">未能解锁任何成就</p>';
+        }
+
+        function calculateEndScore() {
+            let competition = 0;
+            if (game.competitionResults.ioi?.medal === 'gold') competition = 50;
+            else if (game.competitionResults.ioi?.medal) competition = 45;
+            else if (game.competitionResults.ctsc?.qualified) competition = 42;
+            else if (game.competitionResults.noi?.medal === 'gold') competition = 38;
+            else if (game.competitionResults.noi?.medal === 'silver') competition = 34;
+            else if (game.competitionResults.noi?.medal === 'bronze') competition = 30;
+            else if (game.competitionResults.provincial?.qualified) competition = 26;
+            else if (game.competitionResults.noip?.medal === 'gold') competition = 22;
+            else if (game.competitionResults.noip?.medal === 'silver') competition = 18;
+            else if (game.competitionResults.csp_s?.medal === 'gold') competition = 14;
+            else if (game.competitionResults.csp_s?.medal === 'silver') competition = 10;
+            else competition = Math.min(6, game.competitionsEntered);
+            
+            const initialTotal = game.isSenior ? 150 : 100;
+            const currentTotal = game.thinking + game.coding + game.mental + game.ds + game.graph + game.string + game.dp + game.math;
+            const growth = Math.min(25, Math.round((currentTotal - initialTotal) / 18));
+            
+            let problems = game.problems >= 1000 ? 20 : game.problems >= 500 ? 16 : game.problems >= 200 ? 12 : game.problems >= 100 ? 8 : game.problems >= 50 ? 4 : Math.min(2, Math.floor(game.problems / 25));
+            
+            let social = 0;
+            COACHES.forEach(coach => { if (!game.coaches[coach.id].locked) social += Math.floor(game.coaches[coach.id].relation / 8); });
+            social = Math.min(15, social);
+            
+            const total = competition + growth + problems + social;
+            
+            let rank, endingTitle, endingDesc;
+            if (total >= 95) { rank = '传奇'; endingTitle = '🌟 IOI金牌传奇'; endingDesc = '你站在了世界之巅！IOI金牌！'; }
+            else if (total >= 85) { rank = '卓越'; endingTitle = '🏅 国家队成员'; endingDesc = '成功入选国家队，为国争光！'; }
+            else if (total >= 70) { rank = '优秀'; endingTitle = '🥇 NOI金牌'; endingDesc = 'NOI金牌，入选国家集训队！'; }
+            else if (total >= 55) { rank = '良好'; endingTitle = '🥈 NOI银牌/省队'; endingDesc = '省队成员，NOI取得佳绩！'; }
+            else if (total >= 40) { rank = '进步'; endingTitle = '🥉 省一等奖'; endingDesc = '获得省一等奖，为升学加分！'; }
+            else { rank = '普通'; endingTitle = '📚 OI经历'; endingDesc = 'OI之路虽有遗憾，但收获颇丰。'; }
+            
+            return { total, rank, competition, growth, problems, social, endingTitle, endingDesc };
+        }
+
+        function confirmEnd() {
+            showModal('确认退役', '<p>确定要提前结束OI生涯吗？</p>', [
+                { text: '继续努力', action: 'close' },
+                { text: '确认退役', action: 'endGameNow', primary: true }
+            ]);
+        }
+
+        // ==================== 弹窗系统 ====================
+        function showModal(title, content, buttons) {
+            const container = document.getElementById('modal-container');
+            let buttonsHtml = buttons.map(btn => `<button class="btn ${btn.primary ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="${btn.action === 'close' ? 'closeModal()' : btn.action}">${btn.text}</button>`).join('');
+            container.innerHTML = `<div class="modal-overlay"><div class="modal"><div class="modal-header"><div class="modal-title">${title}</div></div><div class="modal-body">${content}</div><div class="modal-footer">${buttonsHtml}</div></div></div>`;
+        }
+
+        function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+        function endGameNow() { closeModal(); endGame(); }
+
+        // ==================== Admin系统 ====================
+        let adminVisible = false;
+        document.addEventListener('keydown', (e) => { if (e.key === '`' || e.key === '~') { document.getElementById('admin-panel').classList.toggle('hidden'); adminVisible = !adminVisible; } });
+
+        function toggleAdminMenu() {
+            const menu = document.getElementById('admin-menu');
+            menu.classList.toggle('hidden');
+            if (!menu.classList.contains('hidden') && game) {
+                document.getElementById('admin-thinking').value = game.thinking;
+                document.getElementById('admin-coding').value = game.coding;
+                document.getElementById('admin-mental').value = game.mental;
+                document.getElementById('admin-money').value = game.money;
+                document.getElementById('admin-rp').value = game.rp;
+                document.getElementById('admin-pressure').value = game.pressure;
+            }
+        }
+
+        function applyAdmin() {
+            if (!game) return;
+            game.thinking = parseInt(document.getElementById('admin-thinking').value) || 0;
+            game.coding = parseInt(document.getElementById('admin-coding').value) || 0;
+            game.mental = parseInt(document.getElementById('admin-mental').value) || 0;
+            game.money = parseInt(document.getElementById('admin-money').value) || 0;
+            game.rp = Math.min(100, Math.max(0, parseInt(document.getElementById('admin-rp').value) || 0));
+            game.pressure = Math.min(100, Math.max(0, parseInt(document.getElementById('admin-pressure').value) || 0));
+            addLog('⚙️ Admin修改已应用', 'warning');
+            updateUI();
+            document.getElementById('admin-menu').classList.add('hidden');
+        }
+
+        function resetGame() { if (confirm('确定要重新开始游戏吗？')) location.reload(); }
+
+        // ==================== 初始化 ====================
+        let selectedStart = 'senior';
+        function selectStart(type) {
+            selectedStart = type;
+            document.querySelectorAll('.start-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelector(`[data-start="${type}"]`).classList.add('selected');
+        }
+
+        function startGame() {
+            const playerName = document.getElementById('player-name').value.trim() || '匿名选手';
+            initGame(playerName, selectedStart);
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            updateUI();
+            
+            const comps = checkCompetitionThisWeek();
+            if (comps.length > 0) { game.competitionQueue = comps; setTimeout(() => showPendingCompetition(), 500); }
+            
+            showModal('欢迎来到OI世界', `
+                <div style="text-align: center; padding: 10px;">
+                    <p style="font-size: 1.2rem; margin-bottom: 15px;">你好，<strong>${playerName}</strong>！</p>
+                    <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                        <p style="font-weight: bold; color: var(--primary);">🎯 目标：冲击IOI金牌！</p>
+                        <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 8px;">晋级路线：CSP-S初赛→复赛→NOIP→省选→NOI→CTSC→IOI</p>
+                    </div>
+                    <p style="color: var(--danger); margin-bottom: 10px;"><strong>⚠️ 比赛将自动强制参加！</strong></p>
+                    <div style="background: var(--bg); padding: 15px; border-radius: 10px; text-align: left;">
+                        <p><strong>随机初始属性：</strong></p>
+                        <p>思维: ${game.thinking} | 编程: ${game.coding} | 心理: ${game.mental}</p>
+                        <p style="margin-top: 5px;">RP: ${game.rp} | 金钱: ${game.money}</p>
+                    </div>
+                </div>
+            `, [{ text: '开始OI之旅', action: 'close' }]);
+        }
+    </script>
+</body>
+</html>
