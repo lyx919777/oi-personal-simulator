@@ -72,7 +72,7 @@ CSP-S初赛 → CSP-S复赛 → NOIP → 省选 → NOI → CTSC → IOI
 
 ## 🚀 快速开始
 
-1. 下载 `oi-simulator.html` 文件
+1. 下载 `index.html` 文件
 2. 用浏览器打开即可游玩
 3. 无需网络，无需安装
 
